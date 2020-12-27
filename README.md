@@ -1,6 +1,6 @@
-# Microtis-GattoVerde :smirk_cat: :green_heart:
+# Tribes project JAVA :smirk_cat: :green_heart:
 
-Tribes project for the GattoVerde team JAVA
+
 :guardsman::moyai::bomb::crown::european_castle::circus_tent::no_mobile_phones::underage::trophy:
 
 **Environment _variables:_**
