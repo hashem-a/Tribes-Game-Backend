@@ -2,10 +2,12 @@ package com.gattoverdetribes.gattoverdetribes.controllersTests;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
+import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
+import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
+import com.gattoverdetribes.gattoverdetribes.repositories.TroopRepository;
+import com.gattoverdetribes.gattoverdetribes.services.TroopService;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,14 +26,19 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 @AutoConfigureMockMvc
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
-public class ResourceControllerTest {
+public class TroopControllerTest {
 
   @Autowired
   private MockMvc mockMvc;
   @Autowired
-  private ResourceRepository resourceRepository;
+  private KingdomRepository kingdomRepository;
+  @Autowired
+  private TroopRepository troopRepository;
+  @Autowired
+  private TroopService troopService;
 
   String jwt;
+  Kingdom kingdom;
 
   @BeforeEach
   public void init() throws Exception {
@@ -53,36 +60,29 @@ public class ResourceControllerTest {
     String response = result.getResponse().getContentAsString();
     JSONObject jsonObject = new JSONObject(response);
     jwt = jsonObject.get("token").toString();
+    kingdom = kingdomRepository.findByName("rix's kingdom");
   }
 
   @Test
-  public void getResources_WithoutResources() throws Exception {
-    resourceRepository.deleteAll(resourceRepository.findAll());
+  public void getTroops_WithTroops() throws Exception {
+    troopService.createTroopForKingdom("archer", kingdom);
+    this.mockMvc
+        .perform(MockMvcRequestBuilders.get("/kingdom/troops")
+            .accept(MediaType.APPLICATION_JSON)
+            .header("X-tribes-token", "Bearer " + jwt))
+        .andDo(print())
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  public void getTroops_WithoutTroops() throws Exception {
+    troopRepository.deleteAll(troopRepository.findAll());
     this.mockMvc
         .perform(
-            MockMvcRequestBuilders.get("/kingdom/resources").accept(MediaType.APPLICATION_JSON)
+            MockMvcRequestBuilders.get("/kingdom/troops")
+                .accept(MediaType.APPLICATION_JSON)
                 .header("X-tribes-token", "Bearer " + jwt))
         .andDo(print())
         .andExpect(status().isNoContent());
-  }
-
-  @Test
-  public void getResources_WithResources() throws Exception {
-    this.mockMvc
-        .perform(MockMvcRequestBuilders.get("/kingdom/resources").accept(MediaType.APPLICATION_JSON)
-            .header("X-tribes-token", "Bearer " + jwt))
-        .andExpect(status().isOk())
-        .andExpect(content().json("[\n"
-            + "    {\n"
-            + "        \"type\": \"food\",\n"
-            + "        \"amount\": 500,\n"
-            + "        \"generation\": 0\n"
-            + "    },\n"
-            + "    {\n"
-            + "        \"type\": \"gold\",\n"
-            + "        \"amount\": 500,\n"
-            + "        \"generation\": 0\n"
-            + "    }\n"
-            + "]")).andDo(print());
   }
 }

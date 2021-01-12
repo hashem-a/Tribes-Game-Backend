@@ -15,4 +15,12 @@ public interface ResourceService {
   ResponseEntity<List<ResourceDetailsDTO>> getResourcesByKingdom(Kingdom kingdom);
 
   List<ResourceDetailsDTO> convertResourcesToDTOByKingdom(Kingdom kingdom);
+
+  Boolean checkSufficientResources(Kingdom kingdom);
+
+  Boolean canPurchaseBuildingUpgrade(Kingdom kingdom);
+
+  void calculateKingdomsProduction();
+
+  Resource getResource(Kingdom kingdom, String type);
 }

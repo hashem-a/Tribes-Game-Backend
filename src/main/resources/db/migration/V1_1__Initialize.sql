@@ -45,7 +45,7 @@ CREATE TABLE `resources`
 (
     `id`         bigint NOT NULL AUTO_INCREMENT,
     `type`       varchar(31) NOT NULL,
-    `amount`     bigint DEFAULT NULL,
+    `amount`     int DEFAULT NULL,
     `kingdom_id` bigint DEFAULT NULL,
     PRIMARY KEY (`id`),
     FOREIGN KEY (kingdom_id) REFERENCES kingdoms (id)

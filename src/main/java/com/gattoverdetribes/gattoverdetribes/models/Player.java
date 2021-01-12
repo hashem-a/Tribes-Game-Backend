@@ -1,6 +1,5 @@
 package com.gattoverdetribes.gattoverdetribes.models;
 
-import com.gattoverdetribes.gattoverdetribes.dtos.RegisterRequestDTO;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -23,22 +22,14 @@ public class Player {
   private String avatar;
   private Integer points;
 
-  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private Kingdom kingdom;
 
-  public Player() {
-  }
+  public Player() {}
 
   public Player(String username, String password) {
     this.username = username;
     this.password = password;
-  }
-
-  public Player(RegisterRequestDTO registerRequestDTO) {
-    this.username = registerRequestDTO.getUsername();
-    this.password = registerRequestDTO.getPassword();
-    this.avatar = "https://gravatar.com/avatar/12cbdd46acdcfbed7700d433d3b5a500?s=400&d=mp&r=x";
-    this.points = 0;
   }
 
   public Player(String username, String password, Kingdom kingdom) {

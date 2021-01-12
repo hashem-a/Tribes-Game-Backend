@@ -1,16 +1,16 @@
 package com.gattoverdetribes.gattoverdetribes.dtos;
 
-public class RegisterErrorResponseDTO {
+public class CreateBuildingErrorResponseDTO {
 
   private String status;
   private String message;
 
-  public RegisterErrorResponseDTO(String message) {
+  public CreateBuildingErrorResponseDTO(String message) {
     this.status = "error";
     this.message = message;
   }
 
-  public RegisterErrorResponseDTO() {
+  public CreateBuildingErrorResponseDTO() {
     this.status = "error";
   }
 

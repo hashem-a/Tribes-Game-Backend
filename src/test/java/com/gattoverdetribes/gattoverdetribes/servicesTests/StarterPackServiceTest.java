@@ -51,8 +51,8 @@ public class StarterPackServiceTest {
   @Test
   public void setStartingResourcesTest() {
     List<Resource> actualResources = kingdom.getResources();
-    Long actualAmount = kingdom.getResources().get(0).getAmount();
-    Long expectedAmount = 500L;
+    Integer actualAmount = kingdom.getResources().get(0).getAmount();
+    Integer expectedAmount = 500;
 
     Assert.assertEquals(2, actualResources.size());
     Assert.assertEquals(expectedAmount, actualAmount);

@@ -2,6 +2,7 @@ package com.gattoverdetribes.gattoverdetribes.models;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -18,11 +19,10 @@ public class Location {
   private int xcord;
   private int ycord;
 
-  @OneToOne(cascade = {CascadeType.ALL})
+  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   private Kingdom kingdom;
 
   public Location() {
-
   }
 
   public Location(int xcord, int ycord) {

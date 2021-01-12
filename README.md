@@ -31,3 +31,17 @@ In case a new attribute is added/removed for an entity then adding/deleting
 a new column in DB is a must, in resources/db.migration create a new empty version/file 
 (don't modify the old version) V1.1_1__descriptive_action.sql add the new sql statement
 in it for adding that column, also this applies if you need to add or change constraints.
+
+**Spring profiles**
+
+| Key           |  Value       |
+| ------------- | -----------  |
+| PROFILE | test / Heroku / Development|
+
+**The following Spring profiles are _available:_**
+
+| PROFILE       |  SETTINGS    |
+| ------------- | -----------  |
+| test       | with H2 database  |
+| Heroku     | Flyway is disabled, mySQL database |
+| Development| Flyway is enabled, mySQL database      |

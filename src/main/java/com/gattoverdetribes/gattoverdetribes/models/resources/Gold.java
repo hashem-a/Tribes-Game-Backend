@@ -8,14 +8,15 @@ import javax.persistence.Entity;
 public class Gold extends Resource {
 
   public Gold() {
-    this.amount = Long.valueOf(ExternalConfig.getInstance().getResourceStartGold());
+    this.amount = ExternalConfig.getInstance().getResourceStartGold();
+    setType(ResourceType.GOLD);
   }
 
-  public Gold(Long amount) {
+  public Gold(Integer amount) {
     this.amount = amount;
   }
 
-  public Gold(Long amount, Kingdom kingdom) {
+  public Gold(Integer amount, Kingdom kingdom) {
     this.amount = amount;
     this.kingdom = kingdom;
   }

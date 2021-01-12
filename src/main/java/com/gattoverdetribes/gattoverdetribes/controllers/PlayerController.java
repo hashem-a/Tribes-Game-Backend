@@ -2,7 +2,7 @@ package com.gattoverdetribes.gattoverdetribes.controllers;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.RegisterErrorResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.dtos.ErrorResponseDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.services.PlayerService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ public class PlayerController {
 
   @PostMapping("/register")
   public ResponseEntity<?> registerPlayer(@RequestBody RegisterRequestDTO registerRequestDTO) {
-    ResponseEntity<RegisterErrorResponseDTO> validateRegistration =
+    ResponseEntity<ErrorResponseDTO> validateRegistration =
         playerService.validateRegistrationInputs(registerRequestDTO);
     if (validateRegistration == null) {
       return playerService.registerPlayer(registerRequestDTO);

@@ -1,10 +1,10 @@
 package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.KingdomDetailsDTO;
+import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,20 +13,22 @@ public class KingdomServiceImpl implements KingdomService {
 
   private final KingdomRepository kingdomRepository;
   private final StarterPackService starterPackService;
+  private final Mapper mapper;
 
   @Autowired
-  public KingdomServiceImpl(KingdomRepository kingdomRepository,
-      StarterPackServiceImpl starterPackService) {
+  public KingdomServiceImpl(
+      KingdomRepository kingdomRepository,
+      StarterPackServiceImpl starterPackService,
+      Mapper mapper) {
     this.kingdomRepository = kingdomRepository;
     this.starterPackService = starterPackService;
+    this.mapper = mapper;
   }
 
   @Override
   public List<KingdomDetailsDTO> getKingdoms() {
     List<Kingdom> kingdoms = kingdomRepository.findAll();
-    return kingdoms.stream()
-        .map(KingdomDetailsDTO::new)
-        .collect(Collectors.toList());
+    return mapper.kingdomToKingdomDetailsDTO(kingdoms);
   }
 
   @Override

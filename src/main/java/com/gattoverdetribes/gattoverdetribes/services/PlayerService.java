@@ -2,7 +2,7 @@ package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.RegisterErrorResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.dtos.ErrorResponseDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterResponseDTO;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
@@ -30,7 +30,7 @@ public interface PlayerService {
 
   ResponseEntity<RegisterResponseDTO> registerPlayer(RegisterRequestDTO registerRequestDTO);
 
-  ResponseEntity<RegisterErrorResponseDTO> validateRegistrationInputs(
+  ResponseEntity<ErrorResponseDTO> validateRegistrationInputs(
       RegisterRequestDTO registerRequestDTO);
 
   ResponseEntity<LoginResponseDTO> loginPlayer(LoginRequestDTO loginRequestDTO);

@@ -46,6 +46,7 @@ public abstract class Building {
 
   public void fillDefaults(String type) {
     ExternalConfig config = ExternalConfig.getInstance();
+    this.setLevel(config.getBuildingStartLevel());
     this.setHp(config.getBuildingStartHp().getOrDefault(type, 1000));
     this.setStartedAt(System.currentTimeMillis() / 1000);
     this.setFinishedAt(this.getStartedAt() + config.getBuildingConstructionTime()
@@ -106,5 +107,19 @@ public abstract class Building {
 
   public void setKingdom(Kingdom kingdom) {
     this.kingdom = kingdom;
+  }
+
+  public int getGoldProduction() {
+    if (level > 1) {
+      return (int) (level * 10 * 1.1);
+    }
+    return level * 10;
+  }
+
+  public int getFoodProduction() {
+    if (level > 1) {
+      return (int) (level * 10 * 1.1);
+    }
+    return level * 10;
   }
 }

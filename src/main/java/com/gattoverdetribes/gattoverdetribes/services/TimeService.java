@@ -5,5 +5,4 @@ public interface TimeService {
   void checkTime();
 
   long getTimeNow();
-
 }

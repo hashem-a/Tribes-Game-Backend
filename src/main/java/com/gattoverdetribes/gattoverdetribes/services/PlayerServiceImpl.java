@@ -2,9 +2,10 @@ package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.RegisterErrorResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.dtos.ErrorResponseDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
 import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
@@ -26,6 +27,7 @@ public class PlayerServiceImpl implements PlayerService {
   private final PlayerRepository playerRepository;
   private final KingdomService kingdomService;
   private final BCryptPasswordEncoder passwordEncoder;
+  private final Mapper mapper;
 
   @Autowired
   public PlayerServiceImpl(
@@ -33,12 +35,14 @@ public class PlayerServiceImpl implements PlayerService {
       JwtUtil jwtTokenUtil,
       PlayerRepository playerRepository,
       KingdomService kingdomService,
-      BCryptPasswordEncoder passwordEncoder) {
+      BCryptPasswordEncoder passwordEncoder,
+      Mapper mapper) {
     this.playerDetailsService = playerDetailsService;
     this.jwtTokenUtil = jwtTokenUtil;
     this.playerRepository = playerRepository;
     this.kingdomService = kingdomService;
     this.passwordEncoder = passwordEncoder;
+    this.mapper = mapper;
   }
 
   public Player checkOptionalPlayer(String username) {
@@ -52,7 +56,7 @@ public class PlayerServiceImpl implements PlayerService {
   public Player createPlayer(String name, String password, Kingdom kingdom) {
     String encodedPassword = passwordEncoder.encode(password);
     Player player = new Player(name, encodedPassword, kingdom);
-    player.setKingdom(kingdom);
+    kingdom.setPlayer(player);
     playerRepository.save(player);
     return player;
   }
@@ -62,30 +66,29 @@ public class PlayerServiceImpl implements PlayerService {
     Kingdom kingdom = kingdomService.createKingdom(registerRequestDTO.getKingdomName());
     Player player =
         createPlayer(registerRequestDTO.getUsername(), registerRequestDTO.getPassword(), kingdom);
-    RegisterResponseDTO registerResponseDTO = new RegisterResponseDTO(player);
-    return ResponseEntity.ok().body(registerResponseDTO);
+    return ResponseEntity.ok().body(mapper.playerToRegisterResponseDTO(player));
   }
 
   @Override
-  public ResponseEntity<RegisterErrorResponseDTO> validateRegistrationInputs(
+  public ResponseEntity<ErrorResponseDTO> validateRegistrationInputs(
       RegisterRequestDTO registerRequestDTO) {
-    RegisterErrorResponseDTO registerErrorResponseDTO = new RegisterErrorResponseDTO();
+    ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO();
 
     if (isNullOrEmpty(registerRequestDTO.getUsername())) {
-      registerErrorResponseDTO.setMessage("Username is required.");
-      return new ResponseEntity<>(registerErrorResponseDTO, HttpStatus.BAD_REQUEST);
+      errorResponseDTO.setMessage("Username is required.");
+      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
     } else if (isNullOrEmpty(registerRequestDTO.getPassword())) {
-      registerErrorResponseDTO.setMessage("Password is required.");
-      return new ResponseEntity<>(registerErrorResponseDTO, HttpStatus.BAD_REQUEST);
+      errorResponseDTO.setMessage("Password is required.");
+      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
     } else if (isNullOrEmpty(registerRequestDTO.getKingdomName())) {
-      registerErrorResponseDTO.setMessage("Kingdom name is required.");
-      return new ResponseEntity<>(registerErrorResponseDTO, HttpStatus.BAD_REQUEST);
+      errorResponseDTO.setMessage("Kingdom name is required.");
+      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
     } else if (registerRequestDTO.getPassword().length() < 8) {
-      registerErrorResponseDTO.setMessage("Password must be 8 characters.");
-      return new ResponseEntity<>(registerErrorResponseDTO, HttpStatus.NOT_ACCEPTABLE);
+      errorResponseDTO.setMessage("Password must be 8 characters.");
+      return new ResponseEntity<>(errorResponseDTO, HttpStatus.NOT_ACCEPTABLE);
     } else if (playerRepository.existsByUsername(registerRequestDTO.getUsername())) {
-      registerErrorResponseDTO.setMessage("Username is already taken.");
-      return new ResponseEntity<>(registerErrorResponseDTO, HttpStatus.CONFLICT);
+      errorResponseDTO.setMessage("Username is already taken.");
+      return new ResponseEntity<>(errorResponseDTO, HttpStatus.CONFLICT);
     } else {
       return null;
     }
@@ -184,9 +187,7 @@ public class PlayerServiceImpl implements PlayerService {
 
   @Override
   public void deletePlayer(Player player) {
-    if (playerRepository.findByUsername(player.getUsername()).isPresent()) {
-      playerRepository.delete(player);
-    }
+    playerRepository.delete(player);
   }
 
   @Override

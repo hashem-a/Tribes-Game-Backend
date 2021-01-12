@@ -13,6 +13,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 
 @Entity
 @Table(name = "kingdoms")
@@ -22,16 +24,22 @@ public class Kingdom {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
   private String name;
+  private int kingdomFoodProduction = 0;
+  private int kingdomGoldProduction = 0;
+  private int maxStorage = 0;
 
   @OneToOne(mappedBy = "kingdom", cascade = CascadeType.ALL)
   private Location location;
 
+  @LazyCollection(LazyCollectionOption.FALSE)
   @OneToMany(mappedBy = "kingdom")
   private List<Resource> resources;
 
+  @LazyCollection(LazyCollectionOption.FALSE)
   @OneToMany(mappedBy = "kingdom")
   private List<Building> buildings;
 
+  @LazyCollection(LazyCollectionOption.FALSE)
   @OneToMany(mappedBy = "kingdom")
   private List<Troop> troops;
 
@@ -108,5 +116,29 @@ public class Kingdom {
 
   public void setPlayer(Player player) {
     this.player = player;
+  }
+
+  public int getKingdomFoodProduction() {
+    return kingdomFoodProduction;
+  }
+
+  public void setKingdomFoodProduction(int foodProduction) {
+    this.kingdomFoodProduction = foodProduction;
+  }
+
+  public int getKingdomGoldProduction() {
+    return kingdomGoldProduction;
+  }
+
+  public void setKingdomGoldProduction(int goldProduction) {
+    this.kingdomGoldProduction = goldProduction;
+  }
+
+  public int getMaxStorage() {
+    return maxStorage;
+  }
+
+  public void setMaxStorage(int maxStorage) {
+    this.maxStorage = maxStorage;
   }
 }

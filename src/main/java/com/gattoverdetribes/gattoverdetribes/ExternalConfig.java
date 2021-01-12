@@ -3,6 +3,7 @@ package com.gattoverdetribes.gattoverdetribes;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.Scope;
@@ -15,13 +16,18 @@ public class ExternalConfig {
   private static ExternalConfig INSTANCE;
 
   @PostConstruct
+  @Bean
   public void initialize() {
     INSTANCE = this;
   }
 
   public static ExternalConfig getInstance() {
+    if (INSTANCE == null) {
+      INSTANCE = new ExternalConfig();
+    }
     return INSTANCE;
   }
+
 
   @Value("#{${building.construction.time:{'farm': 500, 'mine': 500, 'academy': 800}}}")
   private Map<String, Integer> buildingConstructionTime;
@@ -98,6 +104,10 @@ public class ExternalConfig {
   public void setBuildingConstructionTime(
       Map<String, Integer> buildingConstructionTime) {
     this.buildingConstructionTime = buildingConstructionTime;
+  }
+
+  public static void setINSTANCE(ExternalConfig instance) {
+    ExternalConfig.INSTANCE = instance;
   }
 
   public Integer getBuildingConstructionCost() {
@@ -283,3 +293,4 @@ public class ExternalConfig {
     this.troopStartDefense = troopStartDefense;
   }
 }
+

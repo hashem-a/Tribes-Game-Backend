@@ -8,7 +8,6 @@ import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -39,48 +38,23 @@ public abstract class Troop {
   @Enumerated(EnumType.STRING)
   private TroopType type;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne
   @JoinColumn(name = "kingdomId", referencedColumnName = "id")
   @JsonIgnore
   private Kingdom kingdom;
 
   public Troop() {
-    this.level = ExternalConfig.getInstance().getTroopStartLevel();
-    this.hp = ExternalConfig.getInstance()
-        .getTroopStartHp().getOrDefault("troop", 100);
-    this.attack = ExternalConfig.getInstance()
-        .getTroopStartAttack().getOrDefault("troop", 50);
-    this.defense = ExternalConfig.getInstance()
-        .getTroopStartDefense().getOrDefault("troop", 50);
-    this.startedAt = System.currentTimeMillis() / 1000;
-    this.finishedAt = startedAt + ExternalConfig.getInstance()
-        .getTroopTrainingTime().getOrDefault("troop", 60);
   }
 
   public void fillDefaults(String type) {
     ExternalConfig config = ExternalConfig.getInstance();
+    this.setLevel(config.getTroopStartLevel());
     this.setHp(config.getTroopStartHp().getOrDefault(type, 100));
     this.setAttack(config.getTroopStartAttack().getOrDefault(type, 50));
     this.setDefense(config.getTroopStartDefense().getOrDefault(type, 50));
     this.setStartedAt(System.currentTimeMillis() / 1000);
     this.setFinishedAt(this.getStartedAt() + config.getTroopTrainingTime()
         .getOrDefault(type, 60));
-  }
-
-  public Long getStartedAt() {
-    return startedAt;
-  }
-
-  public void setStartedAt(Long startedAt) {
-    this.startedAt = startedAt;
-  }
-
-  public Long getFinishedAt() {
-    return finishedAt;
-  }
-
-  public void setFinishedAt(Long finishedAt) {
-    this.finishedAt = finishedAt;
   }
 
   public Long getId() {
@@ -123,6 +97,22 @@ public abstract class Troop {
     this.defense = defense;
   }
 
+  public Long getStartedAt() {
+    return startedAt;
+  }
+
+  public void setStartedAt(Long startedAt) {
+    this.startedAt = startedAt;
+  }
+
+  public Long getFinishedAt() {
+    return finishedAt;
+  }
+
+  public void setFinishedAt(Long finishedAt) {
+    this.finishedAt = finishedAt;
+  }
+
   public TroopType getType() {
     return type;
   }
@@ -156,3 +146,4 @@ public abstract class Troop {
     return Objects.hash(id, type);
   }
 }
+

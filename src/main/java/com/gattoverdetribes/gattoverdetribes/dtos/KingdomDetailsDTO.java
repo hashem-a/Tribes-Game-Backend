@@ -1,20 +1,15 @@
 package com.gattoverdetribes.gattoverdetribes.dtos;
 
-import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+@JsonInclude(Include.NON_NULL)
 public class KingdomDetailsDTO {
 
   private Long id;
   private String name;
   private Integer xcord;
   private Integer ycord;
-
-  public KingdomDetailsDTO(Kingdom kingdom) {
-    this.id = kingdom.getId();
-    this.name = kingdom.getName();
-    this.ycord = kingdom.getLocation().getYcord();
-    this.xcord = kingdom.getLocation().getXcord();
-  }
 
   public KingdomDetailsDTO(Long id, String name, Integer xcord, Integer ycord) {
     this.id = id;
@@ -23,8 +18,7 @@ public class KingdomDetailsDTO {
     this.ycord = ycord;
   }
 
-  public KingdomDetailsDTO() {
-  }
+  public KingdomDetailsDTO() {}
 
   public Long getId() {
     return id;

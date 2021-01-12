@@ -1,14 +1,12 @@
 package com.gattoverdetribes.gattoverdetribes.servicesTests;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.when;
 
 import com.gattoverdetribes.gattoverdetribes.GattoverdeTribesApplication;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
-import com.gattoverdetribes.gattoverdetribes.services.KingdomService;
 import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
 import com.gattoverdetribes.gattoverdetribes.services.PlayerService;
 import java.util.Optional;
@@ -26,14 +24,12 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest(classes = GattoverdeTribesApplication.class)
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
-public class PlayerServiceImplTest {
+public class PlayerServiceUnitTest {
 
   @Autowired
   private PlayerService playerService;
   @MockBean
   private PlayerRepository playerRepository;
-  @Autowired
-  private KingdomService kingdomService;
 
   Kingdom kingdom;
   Kingdom kingdom2;
@@ -76,19 +72,5 @@ public class PlayerServiceImplTest {
     when(playerRepository.findById(1L)).thenReturn(Optional.ofNullable(player2));
     Player actualPlayer = playerService.findPlayerById(1L);
     assertEquals(player2, actualPlayer);
-  }
-
-  @Test
-  public void createPlayerTest() {
-    String actualPlayersName = playerService
-        .createPlayer(player.getUsername(), player.getPassword(), kingdom).getUsername();
-    assertEquals(player.getUsername(), actualPlayersName);
-  }
-
-  @Test
-  public void createPlayerNotNullUnitTest() {
-    Player actualPlayer = playerService
-        .createPlayer(player2.getUsername(), player2.getPassword(), kingdom2);
-    assertNotNull(actualPlayer);
   }
 }

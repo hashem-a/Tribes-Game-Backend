@@ -13,5 +13,4 @@ public interface StarterPackService {
   List<Resource> setStartingResources(Kingdom kingdom);
 
   List<Building> setStartingBuildings(Kingdom kingdom);
-
 }

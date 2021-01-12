@@ -2,27 +2,17 @@ package com.gattoverdetribes.gattoverdetribes.dtos;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
-import com.gattoverdetribes.gattoverdetribes.models.resources.Resource;
 
 public class ResourceDetailsDTO {
 
   private String type;
-  private Long amount;
+  private Integer amount;
   private Long generation;
-  @JsonIgnore
-  private Kingdom kingdom;
+  @JsonIgnore private Kingdom kingdom;
 
-  public ResourceDetailsDTO() {
-  }
+  public ResourceDetailsDTO() {}
 
-  public ResourceDetailsDTO(Resource resource) {
-    this.type = resource.getClass().getSimpleName().toLowerCase();
-    this.amount = resource.getAmount();
-    this.generation = 0L;
-    this.kingdom = resource.getKingdom();
-  }
-
-  public ResourceDetailsDTO(String type, Long amount, Long generation, Kingdom kingdom) {
+  public ResourceDetailsDTO(String type, Integer amount, Long generation, Kingdom kingdom) {
     this.type = type;
     this.amount = amount;
     this.generation = generation;
@@ -37,11 +27,11 @@ public class ResourceDetailsDTO {
     this.type = type;
   }
 
-  public Long getAmount() {
+  public Integer getAmount() {
     return amount;
   }
 
-  public void setAmount(Long amount) {
+  public void setAmount(Integer amount) {
     this.amount = amount;
   }
 

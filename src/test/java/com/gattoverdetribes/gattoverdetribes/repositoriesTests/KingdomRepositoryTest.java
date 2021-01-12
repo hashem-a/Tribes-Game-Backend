@@ -29,6 +29,8 @@ public class KingdomRepositoryTest {
     kingdom1.setName("TestKingdom");
     kingdom2 = new Kingdom();
     kingdom2.setName("TestKingdom2");
+    kingdomRepository.save(kingdom1);
+    kingdomRepository.save(kingdom2);
   }
 
   @AfterEach
@@ -45,10 +47,8 @@ public class KingdomRepositoryTest {
 
   @Test
   public void testGetAllKingdoms() throws Exception {
-    kingdomRepository.save(kingdom1);
-    kingdomRepository.save(kingdom2);
     List<Kingdom> list = kingdomRepository.findAll();
-    Assert.assertEquals("TestKingdom", list.get(0).getName());
+    Assert.assertEquals("DummyKingdom", list.get(0).getName());
   }
 
   @Test

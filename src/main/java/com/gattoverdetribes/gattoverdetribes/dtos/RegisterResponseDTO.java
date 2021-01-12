@@ -1,7 +1,5 @@
 package com.gattoverdetribes.gattoverdetribes.dtos;
 
-import com.gattoverdetribes.gattoverdetribes.models.Player;
-
 public class RegisterResponseDTO {
 
   public Long id;
@@ -10,22 +8,13 @@ public class RegisterResponseDTO {
   public String avatar;
   public Integer points;
 
-  public RegisterResponseDTO() {
-  }
+  public RegisterResponseDTO() {}
 
   public RegisterResponseDTO(String username, Long kingdomId, String avatar, Integer points) {
     this.username = username;
     this.kingdomId = kingdomId;
     this.avatar = avatar;
     this.points = points;
-  }
-
-  public RegisterResponseDTO(Player player) {
-    this.id = player.getId();
-    this.username = player.getUsername();
-    this.kingdomId = player.getKingdom().getId();
-    this.avatar = player.getAvatar();
-    this.points = player.getPoints();
   }
 
   public Long getId() {

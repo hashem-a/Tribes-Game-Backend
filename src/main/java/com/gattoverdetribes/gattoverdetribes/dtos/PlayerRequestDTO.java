@@ -1,7 +1,5 @@
 package com.gattoverdetribes.gattoverdetribes.dtos;
 
-import com.gattoverdetribes.gattoverdetribes.models.Player;
-
 public class PlayerRequestDTO {
 
   private String username;
@@ -14,14 +12,7 @@ public class PlayerRequestDTO {
     this.kingdomName = kingdomName;
   }
 
-  public PlayerRequestDTO() {
-  }
-
-  public PlayerRequestDTO(Player player) {
-    this.username = player.getUsername();
-    this.password = player.getPassword();
-    this.kingdomName = player.getKingdom().getName();
-  }
+  public PlayerRequestDTO() {}
 
   public String getUsername() {
     return username;

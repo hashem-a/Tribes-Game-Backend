@@ -8,14 +8,15 @@ import javax.persistence.Entity;
 public class Food extends Resource {
 
   public Food() {
-    this.amount = Long.valueOf(ExternalConfig.getInstance().getResourceStartFood());
+    this.amount = ExternalConfig.getInstance().getResourceStartFood();
+    setType(ResourceType.FOOD);
   }
 
-  public Food(Long amount) {
+  public Food(Integer amount) {
     this.amount = amount;
   }
 
-  public Food(Long amount, Kingdom kingdom) {
+  public Food(Integer amount, Kingdom kingdom) {
     this.amount = amount;
     this.kingdom = kingdom;
   }

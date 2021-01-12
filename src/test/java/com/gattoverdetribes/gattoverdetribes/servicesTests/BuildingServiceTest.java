@@ -3,6 +3,7 @@ package com.gattoverdetribes.gattoverdetribes.servicesTests;
 import static com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingFactory.buildBuilding;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -11,49 +12,60 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.gattoverdetribes.gattoverdetribes.dtos.CreateBuildingRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
-import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
+import com.gattoverdetribes.gattoverdetribes.models.Player;
+import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingType;
 import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
-import com.gattoverdetribes.gattoverdetribes.services.BuildingServiceImpl;
+import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
+import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
+import com.gattoverdetribes.gattoverdetribes.services.BuildingService;
+import com.gattoverdetribes.gattoverdetribes.services.StarterPackService;
 import java.util.Collections;
 import org.junit.Assert;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
+import org.springframework.test.context.TestPropertySource;
 
-@DataJpaTest
-@RunWith(SpringRunner.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestPropertySource(locations = "classpath:application-test.properties")
+@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class BuildingServiceTest {
 
   @Mock
-  BuildingRepository buildingRepository;
-  @InjectMocks
-  BuildingServiceImpl buildingService;
+  private BuildingRepository buildingRepository;
+  @Autowired
+  private BuildingService buildingService;
+  @Autowired
+  private ResourceRepository resourceRepository;
+  @Autowired
+  private KingdomRepository kingdomRepository;
+  @Autowired
+  private StarterPackService starterPackService;
 
-  Building farm;
-  Building mine;
+  private CreateBuildingRequestDTO createBuildingRequestDTO;
+  private Kingdom kingdom;
+  private Player player;
 
   @BeforeEach
-  public void setUp() throws InvalidBuildingException {
-    farm = buildBuilding("farm");
-    farm.setLevel(0);
-    buildingRepository.save(farm);
-    mine = buildBuilding("mine");
-    mine.setLevel(0);
-    buildingRepository.save(mine);
+  public void setup() {
+    kingdom = new Kingdom("rix's kingdom");
+    player = new Player("rix12345", "rix12345", kingdom);
+    createBuildingRequestDTO = new CreateBuildingRequestDTO();
+    kingdomRepository.save(kingdom);
+    kingdom.setResources(starterPackService.setStartingResources(kingdom));
   }
 
-  @AfterEach
-  public void tearDown() {
-    buildingRepository.deleteAll();
-  }
 
   @Test
   public void testSaveBuilding() {
@@ -92,5 +104,49 @@ public class BuildingServiceTest {
     building.setLevel(0);
     verify(building, times(1)).setLevel(0);
     verify(building, times(1)).setKingdom(kingdom);
+  }
+
+  @Test
+  public void validateBuildingTypeTest_406() {
+    setup();
+    HttpStatus status = HttpStatus.NOT_ACCEPTABLE;
+    String message = "Invalid building type.";
+    assertEquals(status, buildingService.validateBuildingType("barracks").getStatusCode());
+    assertThat(buildingService.validateBuildingType("barracks").toString().equals(message));
+  }
+
+  @Test
+  public void validateBuildingTypeTest_406_townhall() {
+    setup();
+    HttpStatus status = HttpStatus.NOT_ACCEPTABLE;
+    String message = "Only one townhall per kingdom is allowed.";
+    assertEquals(status, buildingService.validateBuildingType("townhall").getStatusCode());
+    assertThat(buildingService.validateBuildingType("townhall").toString().equals(message));
+  }
+
+  @Test
+  public void validateBuildingTypeTest_400() {
+    setup();
+    HttpStatus status = HttpStatus.BAD_REQUEST;
+    String message = "Missing parameter(s): type!";
+    assertEquals(status, buildingService.validateBuildingType("").getStatusCode());
+    assertThat(buildingService.validateBuildingType("").toString().equals(message));
+  }
+
+  @Test
+  public void purchaseBuildingTest_200() {
+    setup();
+    HttpStatus status = HttpStatus.OK;
+    String message = "{\n"
+        + "    \"id\": 14,\n"
+        + "    \"type\": \"mine\",\n"
+        + "    \"level\": 1,\n"
+        + "    \"hp\": 1000,\n"
+        + "    \"startedAt\": 1608216943596000,\n"
+        + "    \"finishedAt\": 1608216943596060\n"
+        + "}";
+    assertEquals(status,
+        buildingService.purchaseBuilding("mine", player).getStatusCode());
+    assertThat(buildingService.purchaseBuilding("mine", player).toString().equals(message));
   }
 }
