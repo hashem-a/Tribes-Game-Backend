@@ -1,24 +1,24 @@
 package com.gattoverdetribes.gattoverdetribes.servicesTests;
 
-import static com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingFactory.buildBuilding;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.ResourceDetailsDTO;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidResourceException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NotEnoughResourcesException;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
-import com.gattoverdetribes.gattoverdetribes.models.Player;
-import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.models.resources.Food;
 import com.gattoverdetribes.gattoverdetribes.models.resources.Gold;
 import com.gattoverdetribes.gattoverdetribes.models.resources.Resource;
 import com.gattoverdetribes.gattoverdetribes.models.resources.ResourceFactory;
-import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
+import com.gattoverdetribes.gattoverdetribes.services.KingdomService;
 import com.gattoverdetribes.gattoverdetribes.services.ResourceService;
-import com.gattoverdetribes.gattoverdetribes.services.StarterPackService;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,59 +39,19 @@ public class ResourceServiceTest {
   @Autowired
   private KingdomRepository kingdomRepository;
   @Autowired
-  private StarterPackService starterPackService;
-  @Autowired
-  private BuildingRepository buildingRepository;
+  private KingdomService kingdomService;
 
-  Resource gold;
-  Resource food;
   Kingdom kingdom;
-  Building farm;
-  Building mine;
-  Building townhall;
-  Player player;
 
   @BeforeEach
   public void setup() {
-    kingdom = new Kingdom("Narnia");
-    kingdomRepository.save(kingdom);
-    gold = new Gold();
-    food = new Food();
-    gold.setKingdom(kingdom);
-    food.setKingdom(kingdom);
-    resourceRepository.save(gold);
-    resourceRepository.save(food);
-    List<Resource> resources = new ArrayList<>();
-    resources.add(gold);
-    resources.add(food);
-    resourceRepository.save(gold);
-    resourceRepository.save(food);
-    kingdom.setResources(resources);
-    farm = buildBuilding("farm");
-    farm.setLevel(1);
-    farm.setKingdom(kingdom);
-    buildingRepository.save(farm);
-    mine = buildBuilding("mine");
-    mine.setLevel(1);
-    mine.setKingdom(kingdom);
-    buildingRepository.save(mine);
-    townhall = buildBuilding("townhall");
-    townhall.setLevel(1);
-    townhall.setKingdom(kingdom);
-    buildingRepository.save(townhall);
-    List<Building> buildings = new ArrayList<>();
-    buildings.add(farm);
-    buildings.add(mine);
-    buildings.add(townhall);
-    kingdom.setBuildings(buildings);
-    kingdomRepository.save(kingdom);
+    kingdom = kingdomService.createKingdom("Narnia");
   }
 
   @Test
   public void findAllResourcesIntegrationTest() {
-    List<Resource> expectedList = resourceRepository.findAllByKingdomId(kingdom.getId());
-    List<ResourceDetailsDTO> actualList = resourceService.convertResourcesToDTOByKingdom(kingdom);
-    Assert.assertEquals(expectedList.size(), actualList.size());
+    List<ResourceDetailsDTO> actualList = resourceService.getResourcesByKingdom(kingdom);
+    Assert.assertEquals(2, actualList.size());
   }
 
   @Test
@@ -104,20 +64,26 @@ public class ResourceServiceTest {
   }
 
   @Test
-  public void checkSufficientResourcesTest_withStarterPackResources() {
-    kingdom = new Kingdom("rix's kingdom");
-    player = new Player("rix12345", "rix12345", kingdom);
-    kingdomRepository.save(kingdom);
-    kingdom.setResources(starterPackService.setStartingResources(kingdom));
-    Assert.assertTrue(resourceService.checkSufficientResources(kingdom));
+  public void createResourceThrowsExceptionTest() throws InvalidResourceException {
+    assertThatExceptionOfType(InvalidBuildingException.class)
+        .isThrownBy(() -> resourceService.createResource("wood", kingdom))
+        .withMessage("Created such resource can not be. Yrsssss.");
   }
 
   @Test
-  public void checkSufficientResourcesTest_withoutStarterPackResources() {
-    kingdom = new Kingdom("rix's kingdom");
-    player = new Player("rix12345", "rix12345", kingdom);
-    kingdomRepository.save(kingdom);
-    Assert.assertFalse(resourceService.checkSufficientResources(kingdom));
+  public void checkSufficientResourcesTest() {
+    Assertions
+        .assertDoesNotThrow(() -> resourceService.buildBuildingCheckSufficientResources(kingdom));
+  }
+
+  @Test
+  public void checkInsufficientResourcesTest() {
+    Gold gold = resourceRepository.findByKingdom(kingdom);
+    gold.setAmount(0);
+    resourceService.saveResource(gold);
+    Assertions.assertThrows(NotEnoughResourcesException.class, () -> {
+      resourceService.buildBuildingCheckSufficientResources(kingdom);
+    });
   }
 
   @Test

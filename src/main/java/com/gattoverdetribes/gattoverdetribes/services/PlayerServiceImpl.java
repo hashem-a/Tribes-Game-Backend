@@ -1,20 +1,26 @@
 package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.LoginRequestDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.LoginResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.ErrorResponseDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.RegisterResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.exceptions.IdNotFoundException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.IncorrectPasswordException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.IncorrectUsernameException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidPasswordException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidUsernameException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingParameterException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.PlayerNotActiveException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.PlayerNotFoundException;
 import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
+import com.gattoverdetribes.gattoverdetribes.models.ConfirmationToken;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
+import com.gattoverdetribes.gattoverdetribes.repositories.ConfirmationTokenRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
 import com.gattoverdetribes.gattoverdetribes.security.service.PlayerDetailsService;
 import com.gattoverdetribes.gattoverdetribes.security.utilities.JwtUtil;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,6 +34,8 @@ public class PlayerServiceImpl implements PlayerService {
   private final KingdomService kingdomService;
   private final BCryptPasswordEncoder passwordEncoder;
   private final Mapper mapper;
+  private final JavaMailService javaMailService;
+  private final ConfirmationTokenRepository confirmationTokenRepository;
 
   @Autowired
   public PlayerServiceImpl(
@@ -36,117 +44,101 @@ public class PlayerServiceImpl implements PlayerService {
       PlayerRepository playerRepository,
       KingdomService kingdomService,
       BCryptPasswordEncoder passwordEncoder,
-      Mapper mapper) {
+      Mapper mapper,
+      JavaMailService javaMailService,
+      ConfirmationTokenRepository confirmationTokenRepository) {
     this.playerDetailsService = playerDetailsService;
     this.jwtTokenUtil = jwtTokenUtil;
     this.playerRepository = playerRepository;
     this.kingdomService = kingdomService;
     this.passwordEncoder = passwordEncoder;
     this.mapper = mapper;
-  }
-
-  public Player checkOptionalPlayer(String username) {
-    if (playerRepository.findByUsername(username).isPresent()) {
-      return playerRepository.findByUsername(username).get();
-    }
-    return null;
+    this.javaMailService = javaMailService;
+    this.confirmationTokenRepository = confirmationTokenRepository;
   }
 
   @Override
-  public Player createPlayer(String name, String password, Kingdom kingdom) {
+  public Player createPlayer(String name, String password, String email, Kingdom kingdom)
+      throws Exception {
     String encodedPassword = passwordEncoder.encode(password);
-    Player player = new Player(name, encodedPassword, kingdom);
+    Player player = new Player(name, encodedPassword, email, kingdom);
     kingdom.setPlayer(player);
+    ConfirmationToken confirmationToken = new ConfirmationToken(player);
+    player.setConfirmationToken(confirmationToken);
     playerRepository.save(player);
+    javaMailService.sendConfirmationMail(email, confirmationToken.getToken());
     return player;
   }
 
   @Override
-  public ResponseEntity<RegisterResponseDTO> registerPlayer(RegisterRequestDTO registerRequestDTO) {
+  public RegisterResponseDTO registerPlayer(RegisterRequestDTO registerRequestDTO)
+      throws Exception {
     Kingdom kingdom = kingdomService.createKingdom(registerRequestDTO.getKingdomName());
     Player player =
-        createPlayer(registerRequestDTO.getUsername(), registerRequestDTO.getPassword(), kingdom);
-    return ResponseEntity.ok().body(mapper.playerToRegisterResponseDTO(player));
+        createPlayer(
+            registerRequestDTO.getUsername(),
+            registerRequestDTO.getPassword(),
+            registerRequestDTO.getEmail(),
+            kingdom);
+    return mapper.playerToRegisterResponseDTO(player);
   }
 
   @Override
-  public ResponseEntity<ErrorResponseDTO> validateRegistrationInputs(
-      RegisterRequestDTO registerRequestDTO) {
-    ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO();
+  public Player checkOptionalPlayer(String username) throws IncorrectUsernameException {
+    if (playerRepository.findByUsername(username).isPresent()) {
+      return playerRepository.findByUsername(username).get();
+    }
+    throw new IncorrectUsernameException("No player of such name I see. Hrrmmm.");
+  }
+
+  @Override
+  public void validateRegistrationInputs(RegisterRequestDTO registerRequestDTO) {
 
     if (isNullOrEmpty(registerRequestDTO.getUsername())) {
-      errorResponseDTO.setMessage("Username is required.");
-      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
+      throw new MissingParameterException("Fill in username you must.");
     } else if (isNullOrEmpty(registerRequestDTO.getPassword())) {
-      errorResponseDTO.setMessage("Password is required.");
-      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
+      throw new MissingParameterException("Fill in secret password you must.");
+    } else if (isNullOrEmpty(registerRequestDTO.getEmail())) {
+      throw new MissingParameterException("Fill in email address you must.");
     } else if (isNullOrEmpty(registerRequestDTO.getKingdomName())) {
-      errorResponseDTO.setMessage("Kingdom name is required.");
-      return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
+      throw new MissingParameterException("Fill in your kingdom's name you must. Yes, hrrmmm.");
     } else if (registerRequestDTO.getPassword().length() < 8) {
-      errorResponseDTO.setMessage("Password must be 8 characters.");
-      return new ResponseEntity<>(errorResponseDTO, HttpStatus.NOT_ACCEPTABLE);
+      throw new InvalidPasswordException("Be 8 characters your secret password must. Hrmm.");
     } else if (playerRepository.existsByUsername(registerRequestDTO.getUsername())) {
-      errorResponseDTO.setMessage("Username is already taken.");
-      return new ResponseEntity<>(errorResponseDTO, HttpStatus.CONFLICT);
-    } else {
-      return null;
+      throw new InvalidUsernameException(
+          "Existing in this world some other entity of the same name already is.");
     }
   }
 
   @Override
-  public ResponseEntity<LoginResponseDTO> loginPlayer(LoginRequestDTO loginRequestDTO) {
-    LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
-
-    if (isNotNullAndNotEmpty(loginRequestDTO.getUsername())
-        && isNotNullAndNotEmpty(loginRequestDTO.getPassword())) {
-
-      Player player = checkOptionalPlayer(loginRequestDTO.getUsername());
-      if (player == null) {
-        loginResponseDTO.setStatus("error");
-        loginResponseDTO.setMessage("Username or password is incorrect.");
-        return new ResponseEntity<>(loginResponseDTO, HttpStatus.UNAUTHORIZED);
-      } else if (!passwordEncoder.matches(loginRequestDTO.getPassword(), player.getPassword())) {
-        loginResponseDTO.setStatus("error");
-        loginResponseDTO.setMessage("Username or password is incorrect.");
-        return new ResponseEntity<>(loginResponseDTO, HttpStatus.UNAUTHORIZED);
-      } else {
-        return generateTokenResponse(loginRequestDTO);
-      }
-    } else {
-      return validateLoginInputs(loginRequestDTO);
+  public String loginPlayer(LoginRequestDTO loginRequestDTO) {
+    validateLoginInputs(loginRequestDTO);
+    Player player = checkOptionalPlayer(loginRequestDTO.getUsername());
+    if (!passwordEncoder.matches(loginRequestDTO.getPassword(), player.getPassword())) {
+      throw new IncorrectPasswordException("Your username or password correct is not.");
+    } else if (!player.getActive()) {
+      throw new PlayerNotActiveException("Please activate your registration via email.");
     }
+    return generateToken(loginRequestDTO);
   }
 
-  public ResponseEntity<LoginResponseDTO> generateTokenResponse(LoginRequestDTO loginRequestDTO) {
-    LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
-    final UserDetails userDetails =
-        playerDetailsService.loadUserByUsername(loginRequestDTO.getUsername());
-    final String jwt = jwtTokenUtil.generateToken(userDetails);
-    loginResponseDTO.setStatus("ok");
-    loginResponseDTO.setToken(jwt);
-    return ResponseEntity.ok().body(loginResponseDTO);
-  }
-
-  public ResponseEntity<LoginResponseDTO> validateLoginInputs(LoginRequestDTO loginRequestDTO) {
-    LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
+  @Override
+  public void validateLoginInputs(LoginRequestDTO loginRequestDTO) {
 
     if (isNullOrEmpty(loginRequestDTO.getUsername())
         && isNullOrEmpty(loginRequestDTO.getPassword())) {
-      loginResponseDTO.setStatus("error");
-      loginResponseDTO.setMessage("Missing parameters: Username & password");
+      throw new MissingParameterException("Fill in username and secret password you must.");
     } else if (isNullOrEmpty(loginRequestDTO.getUsername())) {
-      loginResponseDTO.setStatus("error");
-      loginResponseDTO.setMessage("Missing parameter: Username");
+      throw new MissingParameterException("Fill in username you must. Yes, hrrmmm.");
     } else if (isNullOrEmpty(loginRequestDTO.getPassword())) {
-      loginResponseDTO.setStatus("error");
-      loginResponseDTO.setMessage("Missing parameter: password");
+      throw new MissingParameterException("Fill in secret password you must, hrrmmm.");
     }
-    return new ResponseEntity<>(loginResponseDTO, HttpStatus.BAD_REQUEST);
   }
 
-  private boolean isNotNullAndNotEmpty(String str) {
-    return str != null && !str.isEmpty();
+  public String generateToken(LoginRequestDTO loginRequestDTO) {
+    final UserDetails userDetails =
+        playerDetailsService.loadUserByUsername(loginRequestDTO.getUsername());
+    return jwtTokenUtil.generateToken(userDetails);
   }
 
   private boolean isNullOrEmpty(String str) {
@@ -161,13 +153,31 @@ public class PlayerServiceImpl implements PlayerService {
   }
 
   @Override
+  public Player findPlayerByToken(String token) {
+    Player player = confirmationTokenRepository.findByToken(token).getPlayer();
+    if (player == null) {
+      throw new PlayerNotFoundException();
+    }
+    return player;
+  }
+
+  @Override
   public Player findPlayerByUsername(String username) {
     return playerRepository.findByUsername(username).orElse(null);
   }
 
   @Override
+  public Long findPlayersIdByUsername(String username) {
+    Player player = checkOptionalPlayer(username);
+    if (player == null) {
+      return null;
+    }
+    return player.getId();
+  }
+
+  @Override
   public Player findPlayerById(Long id) {
-    return playerRepository.findById(id).orElse(null);
+    return playerRepository.findById(id).orElseThrow((IdNotFoundException::new));
   }
 
   @Override
@@ -187,7 +197,9 @@ public class PlayerServiceImpl implements PlayerService {
 
   @Override
   public void deletePlayer(Player player) {
-    playerRepository.delete(player);
+    if (playerRepository.findByUsername(player.getUsername()).isPresent()) {
+      playerRepository.delete(player);
+    }
   }
 
   @Override

@@ -37,12 +37,14 @@ public class PlayerServiceUnitTest {
   Player player2;
 
   @BeforeEach
-  public void setup() {
+  public void setup() throws Exception {
     kingdom = new Kingdom("Narnia");
     kingdom2 = new Kingdom("Marnia");
 
-    player = playerService.createPlayer("Me", "123", kingdom);
-    player2 = playerService.createPlayer("You", "123", kingdom2);
+    player = playerService.createPlayer("Me", "123",
+        "rix12345@gmail.com", kingdom);
+    player2 = playerService.createPlayer("You", "123",
+        "rix12345@gmail.com", kingdom2);
   }
 
   @Test

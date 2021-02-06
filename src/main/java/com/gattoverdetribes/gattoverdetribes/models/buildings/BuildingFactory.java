@@ -5,16 +5,12 @@ import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException
 
 public class BuildingFactory {
 
-  public static Building buildBuilding(String buildingType) throws IllegalArgumentException {
+  public static Building buildBuilding(String buildingType) throws InvalidBuildingException {
     for (BuildingType type : BuildingType.values()) {
-      try {
-        if (BuildingType.valueOf(buildingType.toUpperCase()).equals(type)) {
-          return generateBuilding(type);
-        }
-      } catch (IllegalArgumentException e) {
-        throw new InvalidBuildingException("Invalid building request");
+      if (BuildingType.valueOf(buildingType.toUpperCase()).equals(type)) {
+        return generateBuilding(type);
       }
     }
-    return null;
+    throw new InvalidBuildingException("Created such building can not be. Yrsssss.");
   }
 }

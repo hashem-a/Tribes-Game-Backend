@@ -40,10 +40,13 @@ public class TimeServiceTest {
 
   @Test
   public void checkTime_notIncreaseTick() throws InterruptedException {
+    GameTime gameTime = new GameTime();
+    gameTime.setServerStart(1607501228L);
+    gameTimeRepository.save(gameTime);
     timeServiceimpl.checkTime();
-    GameTime gameTime = gameTimeRepository.findFirstByOrderByIdAsc();
+    gameTime = gameTimeRepository.findFirstByOrderByIdAsc();
     long initialTick = gameTime.getTicks();
-    Thread.sleep(1000);
+    Thread.sleep(100);
     GameTime gameTime2 = gameTimeRepository.findFirstByOrderByIdAsc();
     long tickAfterOnePeriod = gameTime2.getTicks();
     assertEquals(tickAfterOnePeriod, initialTick);

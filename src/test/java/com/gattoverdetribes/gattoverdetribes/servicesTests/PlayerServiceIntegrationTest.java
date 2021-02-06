@@ -33,26 +33,29 @@ public class PlayerServiceIntegrationTest {
   Player player2;
 
   @BeforeEach
-  public void setup() {
+  public void setup() throws Exception {
     kingdom = new Kingdom("Narnia");
     kingdom2 = new Kingdom("Marnia");
-    player = playerService.createPlayer("Me", "123123123", kingdom);
-    player2 = playerService.createPlayer("You", "123123123", kingdom2);
+    player = playerService.createPlayer("Me", "123123123",
+        "rix12345@gmail.com", kingdom);
+    player2 = playerService.createPlayer("You", "123123123",
+        "rix12345@gmail.com", kingdom2);
   }
 
   @Test
-  void createPlayer() {
+  void createPlayer() throws Exception {
     List<Player> beforeCreatingPlayerList = playerRepository.findAll();
-    Player createdPlayer = playerService
-        .createPlayer(player.getUsername(), player.getPassword(), new Kingdom("Narnia"));
+    playerService.createPlayer(player.getUsername(), player.getPassword(),
+        player.getEmail(), new Kingdom("Narnia"));
     List<Player> afterCreatingPlayerList = playerRepository.findAll();
     Assert.assertNotEquals(beforeCreatingPlayerList.size(), afterCreatingPlayerList.size());
   }
 
   @Test
-  public void createPlayerNotNullTest() {
+  public void createPlayerNotNullTest() throws Exception {
     Player actualPlayer = playerService
-        .createPlayer(player2.getUsername(), player2.getPassword(), new Kingdom("Marnia"));
+        .createPlayer(player2.getUsername(), player2.getPassword(), player.getEmail(),
+            new Kingdom("Marnia"));
     assertNotNull(actualPlayer);
   }
 

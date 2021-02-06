@@ -41,22 +41,22 @@ public class StarterPackServiceImpl implements StarterPackService {
     List<Kingdom> kingdoms = kingdomRepository.findAll();
     List<Location> locations = kingdoms.stream().map(Kingdom::getLocation)
         .collect(Collectors.toList());
-    Location kingdomLocation = new Location(xcord, ycord);
+    Location newLocation = new Location(xcord, ycord);
     if (locations.stream().allMatch(Objects::isNull)) {
-      kingdomLocation.setKingdom(kingdom);
-      return kingdomLocation;
+      newLocation.setKingdom(kingdom);
+      return newLocation;
     }
     for (int i = 0; i < locations.size(); i++) {
-      if (locations.get(i) != null && locations.get(i).equals(kingdomLocation)) {
+      if (locations.get(i) != null && locations.get(i).equals(newLocation)) {
         xcord = rand.nextInt(100);
         ycord = rand.nextInt(100);
-        kingdomLocation.setXcord(xcord);
-        kingdomLocation.setYcord(ycord);
+        newLocation.setXcord(xcord);
+        newLocation.setYcord(ycord);
         i = 0;
       }
     }
-    kingdomLocation.setKingdom(kingdom);
-    return kingdomLocation;
+    newLocation.setKingdom(kingdom);
+    return newLocation;
   }
 
   @Override

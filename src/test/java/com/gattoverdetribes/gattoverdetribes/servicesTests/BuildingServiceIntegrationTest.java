@@ -1,15 +1,17 @@
 package com.gattoverdetribes.gattoverdetribes.servicesTests;
 
-import static com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingFactory.buildBuilding;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingLevelException;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
+import com.gattoverdetribes.gattoverdetribes.models.Player;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import com.gattoverdetribes.gattoverdetribes.services.BuildingService;
+import com.gattoverdetribes.gattoverdetribes.services.KingdomService;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,32 +31,22 @@ public class BuildingServiceIntegrationTest {
   BuildingService buildingService;
   @Autowired
   KingdomRepository kingdomRepository;
+  @Autowired
+  KingdomService kingdomService;
 
   Kingdom kingdom;
-  Building farm;
-  Building mine;
-  Building townHall;
+  Player player;
 
   @BeforeEach
   public void setUp() throws InvalidBuildingException {
-    kingdom = new Kingdom("Narnia");
-    kingdomRepository.save(kingdom);
-    farm = buildBuilding("farm");
-    farm.setLevel(1);
-    farm.setKingdom(kingdom);
-    buildingRepository.save(farm);
-    mine = buildBuilding("mine");
-    mine.setLevel(1);
-    mine.setKingdom(kingdom);
-    buildingRepository.save(mine);
-    townHall = buildBuilding("townhall");
-    townHall.setLevel(2);
-    townHall.setKingdom(kingdom);
-    buildingRepository.save(townHall);
+    kingdom = kingdomService.createKingdom("Narnia");
+    player = new Player("rix", "password12345", "rix12345@gmail.com");
+    player.setKingdom(kingdom);
   }
 
   @Test
   public void upgradeLevelTest_FarmLevelIsLowerThanTownHalls() {
+    Building farm = buildingService.getBuilding(kingdom, "farm");
     Integer levelBeforeUpgrade = farm.getLevel();
     buildingService.upgradeLevel(farm);
     buildingRepository.save(farm);
@@ -65,50 +57,58 @@ public class BuildingServiceIntegrationTest {
 
   @Test
   public void upgradeLevelTest_FarmLevelIsTheSameAsTownHalls() {
-    farm.setLevel(townHall.getLevel());
-    Integer levelBeforeUpgrade = farm.getLevel();
-    buildingService.upgradeLevel(farm);
-    buildingRepository.save(farm);
-    Integer levelAfterUpgrade = farm.getLevel();
+    Building farm = buildingService.getBuilding(kingdom, "farm");
 
-    assertEquals(levelBeforeUpgrade, levelAfterUpgrade);
+    Assertions.assertThrows(InvalidBuildingLevelException.class, () -> {
+      buildingService.upgradeBuilding(player, farm.getId());
+    });
   }
 
   @Test
   public void upgradeLevelTest_upgradeTownHallLevel() {
-    Integer levelBeforeUpgrade = townHall.getLevel();
-    buildingService.upgradeLevel(townHall);
-    buildingRepository.save(townHall);
-    Integer levelAfterUpgrade = townHall.getLevel();
+    Building townhall = buildingService.getBuilding(kingdom, "townhall");
+    Integer levelBeforeUpgrade = townhall.getLevel();
+    buildingService.upgradeLevel(townhall);
+    buildingRepository.save(townhall);
+    Integer levelAfterUpgrade = townhall.getLevel();
 
     assertNotEquals(levelBeforeUpgrade, levelAfterUpgrade);
   }
 
   @Test
   public void checkMineLevelToTownHallOkTest() {
-
-    assertEquals(true, buildingService.isBuildingUpgradeable(mine));
+    Building townhall = buildingService.getBuilding(kingdom, "townhall");
+    townhall.setLevel(2);
+    buildingService.saveBuilding(townhall);
+    Building mine = buildingService.getBuilding(kingdom, "mine");
+    Assertions.assertDoesNotThrow(() -> buildingService.isBuildingUpgradeable(mine));
   }
 
   @Test
   public void checkFarmLevelToTownHallFailedTest() {
+    Building farm = buildingService.getBuilding(kingdom, "farm");
     farm.setLevel(2);
     buildingRepository.save(farm);
 
-    assertEquals(false, buildingService.isBuildingUpgradeable(farm));
+    Assertions.assertThrows(InvalidBuildingLevelException.class, () -> {
+      buildingService.isBuildingUpgradeable(farm);
+    });
   }
 
   @Test
   public void checkTownHallLevelOkTest() {
-
-    assertEquals(true, buildingService.isBuildingUpgradeable(townHall));
+    Building townhall = buildingService.getBuilding(kingdom, "townhall");
+    Assertions.assertDoesNotThrow(() -> buildingService.isBuildingUpgradeable(townhall));
   }
 
   @Test
   public void checkTownHallLevelFailedTest() {
-    townHall.setLevel(20);
-    buildingRepository.save(townHall);
+    Building townhall = buildingService.getBuilding(kingdom, "townhall");
+    townhall.setLevel(20);
+    buildingRepository.save(townhall);
 
-    assertEquals(false, buildingService.isBuildingUpgradeable(townHall));
+    Assertions.assertThrows(InvalidBuildingLevelException.class, () -> {
+      buildingService.isBuildingUpgradeable(townhall);
+    });
   }
 }

@@ -5,9 +5,13 @@ import static com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingFac
 import com.gattoverdetribes.gattoverdetribes.ExternalConfig;
 import com.gattoverdetribes.gattoverdetribes.dtos.BuildingDetailsDTO;
 import com.gattoverdetribes.gattoverdetribes.dtos.CreateBuildingResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.ErrorResponseDTO;
-import com.gattoverdetribes.gattoverdetribes.dtos.CreateBuildingErrorResponseDTO;
+import com.gattoverdetribes.gattoverdetribes.exceptions.IdNotFoundException;
 import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingLevelException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingParameterException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingResourceException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NoContentException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NotEnoughResourcesException;
 import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
@@ -17,9 +21,8 @@ import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -41,112 +44,107 @@ public class BuildingServiceImpl implements BuildingService {
     if (buildingRepository.findById(id).isPresent()) {
       return buildingRepository.findById(id).get();
     }
-    return null;
+    throw new IdNotFoundException();
+  }
+
+  @Override
+  public void validateBuildingType(String type) {
+    if (type == null || type.isEmpty()) {
+      throw new MissingParameterException("Fill in building type you must.");
+    }
+
+    List<BuildingType> buildingTypes = Arrays.asList(BuildingType.values());
+    List<String> buildings =
+        buildingTypes.stream().map(t -> t.toString().toLowerCase()).collect(Collectors.toList());
+    boolean containsType = buildings.contains(type.toLowerCase());
+
+    if (!containsType) {
+      throw new InvalidBuildingException("Created such building can not be. Yrsssss.");
+    } else if (type.toLowerCase().equals("townhall")) {
+      throw new InvalidBuildingException("Only one townhall kingdom can have. Yes, hrrrm.");
+    }
   }
 
   @Override
   public Building createBuilding(String buildingType, Kingdom kingdom) {
-    try {
-      Building building = buildBuilding(buildingType);
-      assert building != null;
-      building.setLevel(ExternalConfig.getInstance().getBuildingStartLevel());
-      building.setKingdom(kingdom);
-      buildingRepository.save(building);
-      return building;
-    } catch (InvalidBuildingException e) {
-      System.out.println(e.getMessage());
+    if (kingdom.getBuildings() != null) {
+      validateBuildingType(buildingType);
     }
-    return null;
+    Building building = buildBuilding(buildingType);
+    building.setLevel(ExternalConfig.getInstance().getBuildingStartLevel());
+    building.setKingdom(kingdom);
+    saveBuilding(building);
+    return building;
   }
 
   @Override
-  public ResponseEntity<List<BuildingDetailsDTO>> getBuildingsByKingdom(Kingdom kingdom) {
-    List<Building> buildings = kingdom.getBuildings();
-    List<BuildingDetailsDTO> mappedBuildings = mapper.modelToDto(buildings);
-
-    if (mappedBuildings.isEmpty()) {
-      return new ResponseEntity<>(mappedBuildings, HttpStatus.NO_CONTENT);
-    }
-    return new ResponseEntity<>(mappedBuildings, HttpStatus.OK);
-  }
-
-  @Override
-  public ResponseEntity<?> purchaseBuilding(String type, Player player) {
+  public CreateBuildingResponseDTO purchaseBuilding(String type, Player player) {
     Building building = createBuilding(type.toUpperCase(), player.getKingdom());
-    return ResponseEntity.status(200).body(mapper.buildingToCreateBuildingResponseDto(building));
+    List<Building> buildings = buildingRepository.findAllByKingdomId(player.getKingdom().getId());
+    player.getKingdom().setBuildings(buildings);
+    return mapper.buildingToCreateBuildingResponseDto(building);
   }
 
   @Override
-  public ResponseEntity<?> validateBuildingType(String type) {
-    List<BuildingType> buildingTypes = Arrays.asList(BuildingType.values());
-    List<String> buildings =
-        buildingTypes.stream()
-            .map(type1 -> type1.toString().toLowerCase())
-            .collect(Collectors.toList());
-    boolean containsType = buildings.contains(type);
-
-    if (type == null || type.isEmpty()) {
-      return ResponseEntity.status(400).body(new ErrorResponseDTO("Missing parameter(s): type!"));
-    } else if (!containsType) {
-      return ResponseEntity.status(406).body(new ErrorResponseDTO("Invalid building type."));
-    } else if (type.equals("townhall")) {
-      return ResponseEntity.status(406)
-          .body(new ErrorResponseDTO("Only one townhall per kingdom is allowed."));
+  public List<BuildingDetailsDTO> getBuildingsByKingdom(Kingdom kingdom) throws NoContentException {
+    List<Building> buildings = kingdom.getBuildings();
+    if (buildings.isEmpty()) {
+      throw new NoContentException("I sense no buildings in this kingdom.");
     }
-    return null;
+    return mapper.modelToDto(buildings);
   }
 
   @Override
-  public void save(Building building) {
+  public Building getBuilding(Kingdom kingdom, String type) throws EntityNotFoundException {
+    return kingdom.getBuildings().stream()
+        .filter(b -> b.getType().toString().toLowerCase().equals(type.toLowerCase()))
+        .findAny()
+        .orElseThrow(() -> new MissingResourceException("Building cannot be found!"));
+  }
+
+  @Override
+  public void saveBuilding(Building building) {
     buildingRepository.save(building);
   }
 
-  public ResponseEntity<?> upgradeBuilding(Player player, Long id) {
+  @Override
+  public CreateBuildingResponseDTO upgradeBuilding(Player player, Long id)
+      throws NotEnoughResourcesException {
     Building building = checkOptionalBuilding(id);
-    Boolean checkResourceSufficiency =
-        resourceService.canPurchaseBuildingUpgrade(player.getKingdom());
-
-    if (building == null) {
-      return ResponseEntity.status(404).body(new CreateBuildingErrorResponseDTO("Id not found."));
-    } else if (!isBuildingUpgradeable(building)) {
-      return ResponseEntity.status(406)
-          .body(new CreateBuildingErrorResponseDTO("Invalid building level."));
-    } else if (!checkResourceSufficiency) {
-      return ResponseEntity.status(409)
-          .body(new CreateBuildingErrorResponseDTO("Not enough resource."));
-    } else {
-      upgradeLevel(building);
-      return ResponseEntity.status(200).body(mapper.buildingToCreateBuildingResponseDto(building));
-    }
+    resourceService.upgradeBuildingCheckSufficientResources(player.getKingdom());
+    isBuildingUpgradeable(building);
+    upgradeLevel(building);
+    List<Building> buildings = buildingRepository.findAllByKingdomId(player.getKingdom().getId());
+    player.getKingdom().setBuildings(buildings);
+    return mapper.buildingToCreateBuildingResponseDto(building);
   }
 
   public void upgradeLevel(Building building) {
     Integer level = building.getLevel();
-
-    if (isBuildingUpgradeable(building)) {
-      level = level + 1;
-    }
+    level = level + 1;
     building.setLevel(level);
-    save(building);
+    saveBuilding(building);
   }
 
-  public Boolean isBuildingUpgradeable(Building building) {
+  public void isBuildingUpgradeable(Building building) {
     Integer currentBuildingLevel = building.getLevel();
     Kingdom kingdom = building.getKingdom();
     List<Building> kingdomsBuildings = buildingRepository.findAllByKingdomId(kingdom.getId());
-    boolean isTownHall = building.getType().equals(BuildingType.TOWNHALL);
-    Integer townHallLevel = 0;
+    boolean isTownhall = building.getType().equals(BuildingType.TOWNHALL);
+    Integer townhallLevel = 0;
 
     for (Building selectedBuilding : kingdomsBuildings) {
       if (selectedBuilding.getType().equals(BuildingType.TOWNHALL)) {
-        townHallLevel = selectedBuilding.getLevel();
+        townhallLevel = selectedBuilding.getLevel();
       }
     }
 
-    if (!isTownHall && currentBuildingLevel < townHallLevel) {
-      return true;
-    } else {
-      return isTownHall && townHallLevel < 20;
+    if (isTownhall && townhallLevel >= 20) {
+      throw new InvalidBuildingLevelException("Townhall has already reached level 20.");
+    }
+    if (!isTownhall && currentBuildingLevel >= townhallLevel) {
+      throw new InvalidBuildingLevelException(
+          "Building level cannot be higher than Townhall level.");
     }
   }
 }

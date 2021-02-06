@@ -2,6 +2,7 @@ package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.dtos.KingdomDetailsDTO;
 import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NoContentException;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import java.util.List;
@@ -28,6 +29,9 @@ public class KingdomServiceImpl implements KingdomService {
   @Override
   public List<KingdomDetailsDTO> getKingdoms() {
     List<Kingdom> kingdoms = kingdomRepository.findAll();
+    if (kingdoms.isEmpty()) {
+      throw new NoContentException("No kingdoms in this world there are.");
+    }
     return mapper.kingdomToKingdomDetailsDTO(kingdoms);
   }
 

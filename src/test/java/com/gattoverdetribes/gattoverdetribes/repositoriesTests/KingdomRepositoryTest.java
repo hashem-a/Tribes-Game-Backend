@@ -10,11 +10,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-@DataJpaTest
+@SpringBootTest
+@AutoConfigureTestDatabase
 @RunWith(SpringRunner.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 public class KingdomRepositoryTest {
 
   @Autowired
@@ -48,7 +52,7 @@ public class KingdomRepositoryTest {
   @Test
   public void testGetAllKingdoms() throws Exception {
     List<Kingdom> list = kingdomRepository.findAll();
-    Assert.assertEquals("DummyKingdom", list.get(0).getName());
+    Assert.assertEquals("TestKingdom", list.get(0).getName());
   }
 
   @Test

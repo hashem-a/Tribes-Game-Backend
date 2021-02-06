@@ -6,16 +6,12 @@ import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidTroopException;
 
 public class TroopFactory {
 
-  public static Troop createTroop(String troopType) throws IllegalArgumentException {
+  public static Troop createTroop(String troopType) throws InvalidTroopException {
     for (TroopType type : TroopType.values()) {
-      try {
-        if (TroopType.valueOf(troopType.toUpperCase()).equals(type)) {
-          return generateTroop(type);
-        }
-      } catch (IllegalArgumentException e) {
-        throw new InvalidTroopException("Invalid troop request");
+      if (TroopType.valueOf(troopType.toUpperCase()).equals(type)) {
+        return generateTroop(type);
       }
     }
-    return null;
+    throw new InvalidTroopException("Created such troop can not be. Yrsssss.");
   }
 }

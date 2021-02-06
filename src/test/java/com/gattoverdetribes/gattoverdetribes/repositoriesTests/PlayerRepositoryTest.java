@@ -1,9 +1,9 @@
 package com.gattoverdetribes.gattoverdetribes.repositoriesTests;
 
+import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
-import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import java.util.Optional;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -11,11 +11,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
-@DataJpaTest
+@SpringBootTest
+@AutoConfigureTestDatabase
 @RunWith(SpringRunner.class)
 @TestPropertySource(locations = "classpath:application-test.properties")
 public class PlayerRepositoryTest {
@@ -33,6 +36,7 @@ public class PlayerRepositoryTest {
     player = new Player();
     player.setUsername("rix");
     player.setPassword("rix12345");
+    player.setEmail("rix12345@gmail.com");
     kingdom = new Kingdom();
     kingdomRepository.save(kingdom);
   }
@@ -56,6 +60,7 @@ public class PlayerRepositoryTest {
   }
 
   @Test
+  @Transactional
   public void findPlayerByUsernameUnitTest() {
     playerRepository.save(player);
     var optionalPlayer = playerRepository.findByUsername(player.getUsername());
@@ -86,9 +91,11 @@ public class PlayerRepositoryTest {
   }
 
   @Test
+  @Transactional
   public void findPlayerByIdUnitTest() {
     Player playerActual =
-        playerRepository.save(new Player("TestName", "TestPassword", kingdom));
+        playerRepository.save(new Player("TestName", "TestPassword",
+            "rix12345@gmail.com", kingdom));
     Optional<Player> expected = playerRepository.findById(playerActual.getId());
     Assert.assertEquals(playerActual.getUsername(), expected.get().getUsername());
   }

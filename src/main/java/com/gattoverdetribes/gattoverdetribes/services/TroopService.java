@@ -7,9 +7,17 @@ import java.util.List;
 
 public interface TroopService {
 
-  Troop createTroopForKingdom(String troopType, Kingdom kingdom);
+  Troop createTroop(String troopType, Kingdom kingdom);
+
+  void validateTroopType(String type);
+
+  void saveTroop(Troop troop);
 
   Troop getTroopById(Long id);
 
   List<TroopDetailsDTO> getTroopsByKingdom(Kingdom kingdom);
+
+  void deleteTroopById(Long id);
+
+  void deleteTroop(Troop troop);
 }

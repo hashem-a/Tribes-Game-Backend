@@ -5,16 +5,12 @@ import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidResourceException
 
 public class ResourceFactory {
 
-  public static Resource createResource(String resourceType) throws IllegalArgumentException {
+  public static Resource createResource(String resourceType) throws InvalidResourceException {
     for (ResourceType type : ResourceType.values()) {
-      try {
-        if (ResourceType.valueOf(resourceType.toUpperCase()).equals(type)) {
-          return generateResource(type);
-        }
-      } catch (IllegalArgumentException e) {
-        throw new InvalidResourceException("No such resource");
+      if (ResourceType.valueOf(resourceType.toUpperCase()).equals(type)) {
+        return generateResource(type);
       }
     }
-    return null;
+    throw new InvalidResourceException("Created such resource can not be. Yrsssss.");
   }
 }

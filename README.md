@@ -15,6 +15,9 @@ Tribes project for the GattoVerde team JAVA
 |SERVER_PORT|{your local server port ex:8080}|
 |TRIBES_GAMETICK_LEN|{*/{tick period in sec} * * * * *}|
 |SECRET_KEY|{thisisaverylongsecretKey}|
+|LOG_LEVEL|for production: info / for development: debug|
+|EMAIL|{email address you want to send from}|
+|EMAIL_PASSWORD|{the password belongs to it}|
 
 **Authentication:**
 
@@ -44,4 +47,12 @@ in it for adding that column, also this applies if you need to add or change con
 | ------------- | -----------  |
 | test       | with H2 database  |
 | Heroku     | Flyway is disabled, mySQL database |
-| Development| Flyway is enabled, mySQL database      |
+| Development| Flyway is enabled, mySQL database  |
+
+**Email sending service (JavaMail):**
+
+Our application is capable to send a verification email with a link, in order to
+activate the new players' registration.
+Players without activating their new registration via the given email address are
+not allowed to login their account. You need to set EMAIL and EMAIL_PASSWORD environment
+variables for this function.

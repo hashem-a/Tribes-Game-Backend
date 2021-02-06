@@ -37,14 +37,14 @@ public class TroopServiceTest {
   Troop archer;
   Troop horseman;
   Troop swordsman;
-  Kingdom kingdom1;
+  Kingdom kingdom;
 
   @BeforeEach
   public void setUp() throws InvalidTroopException {
-    kingdom1 = new Kingdom();
-    kingdom1.setId(1L);
-    kingdom1.setName("testKingdom");
-    kingdomRepository.save(kingdom1);
+    kingdom = new Kingdom();
+    kingdom.setId(1L);
+    kingdom.setName("testKingdom");
+    kingdomRepository.save(kingdom);
     archer = createTroop("archer");
     troopRepository.save(archer);
     horseman = createTroop("horseman");
@@ -61,7 +61,7 @@ public class TroopServiceTest {
 
   @Test
   public void testCreateTroopForKingdom() {
-    Troop archer2 = troopService.createTroopForKingdom(archer.getType().toString(), kingdom1);
+    Troop archer2 = troopService.createTroop(archer.getType().toString(), kingdom);
     Assertions.assertTrue(troopRepository.findAll().contains(archer2));
     assertThat(archer2).extracting(Troop::getType).isEqualTo(TroopType.ARCHER);
   }
@@ -74,9 +74,9 @@ public class TroopServiceTest {
   }
 
   @Test
-  public void testCreateTroopThrowsIllegalArgumentException() throws IllegalArgumentException {
+  public void testCreateWrongTroopType() throws InvalidTroopException {
     assertThatExceptionOfType(InvalidTroopException.class)
-        .isThrownBy(() -> createTroop("archerr"))
-        .withMessage("Invalid troop request");
+        .isThrownBy(() -> troopService.createTroop("archerr", kingdom))
+        .withMessage("Created such troop can not be. Yrsssss.");
   }
 }

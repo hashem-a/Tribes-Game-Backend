@@ -35,6 +35,7 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(locations = "classpath:application-test.properties")
 @DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 public class MapperTest {
+
   @Autowired
   private Mapper mapper;
   @Autowired
@@ -113,7 +114,8 @@ public class MapperTest {
   @Test
   public void playerModelToDtoTest() {
     Kingdom kingdom = kingdomService.createKingdom("rix's kingdom");
-    Player player1 = new Player("asd", passwordEncoder.encode("asd12345"), kingdom);
+    Player player1 = new Player("asd", passwordEncoder.encode("asd12345"),
+        "rix12345@gmail.com", kingdom);
     PlayerRequestDTO playerRequestDTO = mapper.modelToDto(player1);
     Assertions.assertEquals(player1.getKingdom().getName(), playerRequestDTO.getKingdomName());
     Assertions.assertEquals(player1.getPassword(), playerRequestDTO.getPassword());
@@ -122,7 +124,8 @@ public class MapperTest {
   @Test
   public void playerToRegisterResponseDTOTest() {
     Kingdom kingdom = kingdomService.createKingdom("rix's kingdom");
-    Player player1 = new Player("asd", passwordEncoder.encode("asd12345"), kingdom);
+    Player player1 = new Player("asd", passwordEncoder.encode("asd12345"),
+        "rix12345@gmail.com", kingdom);
     RegisterResponseDTO registerResponseDTO = mapper.playerToRegisterResponseDTO(player1);
     Assertions.assertEquals(player1.getUsername(), registerResponseDTO.getUsername());
     Assertions.assertEquals(player1.getKingdom().getId(), registerResponseDTO.getKingdomId());
@@ -164,7 +167,7 @@ public class MapperTest {
   @Test
   public void troopModelToTroopDetailsDtoTest() {
     Kingdom kingdom = kingdomService.createKingdom("rix's kingdom");
-    Troop troop = troopService.createTroopForKingdom(TroopType.ARCHER.toString(), kingdom);
+    Troop troop = troopService.createTroop(TroopType.ARCHER.toString(), kingdom);
     TroopDetailsDTO troopDetailsDTO = mapper.modelToDto(troop);
     Assertions.assertEquals(troop.getAttack(), troopDetailsDTO.getAttack());
     Assertions.assertEquals(troop.getLevel(), troopDetailsDTO.getLevel());
@@ -173,7 +176,7 @@ public class MapperTest {
   @Test
   public void troopHorsemanModelToTroopDetailsDtoTest() {
     Kingdom kingdom = kingdomService.createKingdom("rix's kingdom");
-    Troop troop = troopService.createTroopForKingdom(TroopType.HORSEMAN.toString(), kingdom);
+    Troop troop = troopService.createTroop(TroopType.HORSEMAN.toString(), kingdom);
     TroopDetailsDTO troopDetailsDTO = mapper.modelToDto(troop);
     Assertions.assertEquals(troop.getAttack(), troopDetailsDTO.getAttack());
     Assertions.assertEquals(troop.getLevel(), troopDetailsDTO.getLevel());

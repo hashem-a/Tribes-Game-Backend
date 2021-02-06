@@ -1,17 +1,19 @@
 package com.gattoverdetribes.gattoverdetribes.controllersTests;
 
 import static org.hamcrest.core.Is.is;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.gattoverdetribes.gattoverdetribes.controllers.PlayerController;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
 import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
+import com.gattoverdetribes.gattoverdetribes.services.JavaMailService;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,15 +36,17 @@ public class PlayerControllerTest {
   private MockMvc mockMvc;
   @Autowired
   private PlayerRepository playerRepository;
-  @InjectMocks
-  private PlayerController playerController;
   @Autowired
   private BCryptPasswordEncoder passwordEncoder;
+  @Mock
+  private JavaMailService javaMailService;
 
   @Test
   public void registerSuccessfulTest() throws Exception {
+    Mockito.doNothing().when(javaMailService).sendConfirmationMail(any(), any());
     String json =
-        "{\"username\": \"rix\",\"password\": \"rix123456\",\"kingdomname\": \"rix's kingdom\"}";
+        "{\"username\": \"rix\",\"password\": \"rix123456\""
+            + ",\"email\": \"rix12345@gmail.com\",\"kingdomname\": \"rix's kingdom\"}";
     mockMvc
         .perform(post("/register").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isOk())
@@ -53,61 +57,67 @@ public class PlayerControllerTest {
   @Test
   public void registerWithoutNameTest() throws Exception {
     String json =
-        "{\"username\": \"\",\"password\": \"rix12356\",\"kingdomname\": \"rix's kingdom\"}";
+        "{\"username\": \"\",\"password\": \"rix12356\","
+            + "\"email\": \"rix12345@gmail.com\",\"kingdomname\": \"rix's kingdom\"}";
     mockMvc
         .perform(post("/register").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isBadRequest())
         .andExpect(
             content().string("{\"status\":\"error\""
-                + ",\"message\":\"Username is required.\"}"))
+                + ",\"message\":\"Fill in username you must.\"}"))
         .andDo(print());
   }
 
   @Test
   public void registerWithoutPasswordTest() throws Exception {
-    String json = "{\"username\": \"rix\",\"password\": \"\",\"kingdomname\": \"rix's kingdom\"}";
+    String json = "{\"username\": \"rix\",\"password\": \"\",\"email\": \"rix12345@gmail.com\","
+        + "\"kingdomname\": \"rix's kingdom\"}";
     mockMvc
         .perform(post("/register").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isBadRequest())
         .andExpect(
             content().string("{\"status\":\"error\"" + ""
-                + ",\"message\":\"Password is required.\"}"))
+                + ",\"message\":\"Fill in secret password you must.\"}"))
         .andDo(print());
   }
 
   @Test
   public void registerWithoutKingdomNameTest() throws Exception {
-    String json = "{\"username\": \"rix\",\"password\": \"rix123456\",\"kingdomname\": \"\"}";
+    String json = "{\"username\": \"rix\",\"password\": \"rix123456\","
+        + "\"email\": \"rix12345@gmail.com\",\"kingdomname\": \"\"}";
     mockMvc
         .perform(post("/register").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isBadRequest())
         .andExpect(
             content()
                 .string("{\"status\":\"error\"" + ""
-                    + ",\"message\":\"Kingdom name is required.\"}"))
+                    + ",\"message\":\"Fill in your kingdom's name you must. Yes, hrrmmm.\"}"))
         .andDo(print());
   }
 
   @Test
   public void registerWithAlreadyExistingUsernameTest() throws Exception {
-    Player player = new Player("rix", "rix123456");
+    Player player = new Player("rix", "rix123456", "rix12345@gmail.com");
     playerRepository.save(player);
     String json =
-        "{\"username\": \"rix\",\"password\": \"rix123456\",\"kingdomname\": \"rix's kingdom\"}";
+        "{\"username\": \"rix\",\"password\": \"rix123456\",\"email\": \"rix12345@gmail.com\""
+            + ",\"kingdomname\": \"rix's kingdom\"}";
     mockMvc
         .perform(post("/register").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isConflict())
         .andExpect(
             content()
                 .string("{\"status\":\"error\"" + ""
-                    + ",\"message\":\"Username is already taken.\"}"))
+                    + ",\"message\":"
+                    + "\"Existing in this world some other entity of the same name already is.\"}"))
         .andDo(print());
   }
 
   @Test
   public void registerShortPasswordTest() throws Exception {
     String json =
-        "{\"username\": \"rix\",\"password\": \"rix123\",\"kingdomname\": \"rix's kingdom\"}";
+        "{\"username\": \"rix\",\"password\": \"rix123\","
+            + "\"email\": \"rix12345@gmail.com\",\"kingdomname\": \"rix's kingdom\"}";
     mockMvc
         .perform(
             MockMvcRequestBuilders.post("/register")
@@ -118,14 +128,15 @@ public class PlayerControllerTest {
             content()
                 .string(
                     "{\"status\":\"error\"" + ""
-                        + ",\"message\":\"Password must be 8 characters.\"}"))
+                        + ",\"message\":\"Be 8 characters your secret password must. Hrmm.\"}"))
         .andDo(print());
   }
 
   @Test
   public void loginSuccessfulTest() throws Exception {
-    Player player = new Player("rix", "rix12345");
+    Player player = new Player("rix", "rix12345", "rix12345@gmai.com");
     player.setPassword(passwordEncoder.encode("rix12345"));
+    player.setActive(true);
     playerRepository.save(player);
 
     String json = "{\"username\": \"rix\",\"password\": \"rix12345\"}";
@@ -141,7 +152,10 @@ public class PlayerControllerTest {
 
   @Test
   public void loginWithNonExistingPlayerTest() throws Exception {
-    String json = "{\"username\": \"rix\",\"password\": \"rix12345\"}";
+    Player player = new Player("rix", "rix123456", "rix12345@gmail.com");
+    playerRepository.save(player);
+
+    String json = "{\"username\": \"zix\",\"password\": \"rix123456\"}";
     mockMvc
         .perform(post("/login").contentType(MediaType.APPLICATION_JSON).content(json))
         .andExpect(status().isUnauthorized())
@@ -149,13 +163,13 @@ public class PlayerControllerTest {
             content()
                 .string(
                     "{\"status\":\"error\""
-                        + ",\"message\":\"Username or password is incorrect.\"}"))
+                        + ",\"message\":\"No player of such name I see. Hrrmmm.\"}"))
         .andDo(print());
   }
 
   @Test
   public void loginWithWrongPasswordTest() throws Exception {
-    Player player = new Player("rix", "rix12345");
+    Player player = new Player("rix", "rix12345", "something@gmail.com");
     playerRepository.save(player);
     String json = "{\"username\": \"rix\",\"password\": \"rix123456\"}";
     mockMvc
@@ -165,12 +179,12 @@ public class PlayerControllerTest {
             content()
                 .string(
                     "{\"status\":\"error\""
-                        + ",\"message\":\"Username or password is incorrect.\"}"))
+                        + ",\"message\":\"Your username or password correct is not.\"}"))
         .andDo(print());
   }
 
   @Test
-  public void loginWithMissingUsernameAndPasswordTest() throws Exception {
+  public void loginWithEmptyBodyTest() throws Exception {
     String json = "{}";
     mockMvc
         .perform(post("/login").contentType(MediaType.APPLICATION_JSON).content(json))
@@ -179,13 +193,13 @@ public class PlayerControllerTest {
             content()
                 .string(
                     "{\"status\":\"error\""
-                        + ",\"message\":\"Missing parameters: Username & password\"}"))
+                        + ",\"message\":\"Fill in username and secret password you must.\"}"))
         .andDo(print());
   }
 
   @Test
   public void loginWithMissingUsernameTest() throws Exception {
-    Player player = new Player("rix", "rix12345");
+    Player player = new Player("rix", "rix12345", "something@gmail.com");
     playerRepository.save(player);
     String json = "{\"username\": \"\",\"password\": \"rix12345\"}";
     mockMvc
@@ -194,7 +208,7 @@ public class PlayerControllerTest {
         .andExpect(
             content()
                 .string("{\"status\":\"error\"" + ""
-                    + ",\"message\":\"Missing parameter: Username\"}"))
+                    + ",\"message\":\"Fill in username you must. Yes, hrrmmm.\"}"))
         .andDo(print());
   }
 
@@ -210,7 +224,7 @@ public class PlayerControllerTest {
         .andExpect(
             content()
                 .string("{\"status\":\"error\"" + ""
-                    + ",\"message\":\"Missing parameter: password\"}"))
+                    + ",\"message\":\"Fill in secret password you must, hrrmmm.\"}"))
         .andDo(print());
   }
 }

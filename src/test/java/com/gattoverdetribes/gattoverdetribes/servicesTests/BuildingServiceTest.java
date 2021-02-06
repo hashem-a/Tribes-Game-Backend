@@ -12,17 +12,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.gattoverdetribes.gattoverdetribes.dtos.CreateBuildingRequestDTO;
 import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingParameterException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NotEnoughResourcesException;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.Player;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.BuildingType;
 import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
-import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
 import com.gattoverdetribes.gattoverdetribes.services.BuildingService;
-import com.gattoverdetribes.gattoverdetribes.services.StarterPackService;
+import com.gattoverdetribes.gattoverdetribes.services.KingdomService;
 import java.util.Collections;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +31,6 @@ import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.TestPropertySource;
@@ -47,23 +46,19 @@ public class BuildingServiceTest {
   @Autowired
   private BuildingService buildingService;
   @Autowired
-  private ResourceRepository resourceRepository;
-  @Autowired
   private KingdomRepository kingdomRepository;
   @Autowired
-  private StarterPackService starterPackService;
+  private KingdomService kingdomService;
 
-  private CreateBuildingRequestDTO createBuildingRequestDTO;
   private Kingdom kingdom;
   private Player player;
 
   @BeforeEach
   public void setup() {
-    kingdom = new Kingdom("rix's kingdom");
-    player = new Player("rix12345", "rix12345", kingdom);
-    createBuildingRequestDTO = new CreateBuildingRequestDTO();
+    kingdom = kingdomService.createKingdom("rix's kingdom");
+    player = new Player("rix12345", "rix12345",
+        "rix12345@gmail.com", kingdom);
     kingdomRepository.save(kingdom);
-    kingdom.setResources(starterPackService.setStartingResources(kingdom));
   }
 
 
@@ -88,10 +83,24 @@ public class BuildingServiceTest {
   }
 
   @Test
-  public void testBuildBuildingThrowsIllegalArgumentException() throws IllegalArgumentException {
+  public void testCreateWrongTypeBuilding() throws InvalidBuildingException {
     assertThatExceptionOfType(InvalidBuildingException.class)
-        .isThrownBy(() -> buildBuilding("frrm"))
-        .withMessage("Invalid building request");
+        .isThrownBy(() -> buildingService.createBuilding("frrm", kingdom))
+        .withMessage("Created such building can not be. Yrsssss.");
+  }
+
+  @Test
+  public void validateBuildingTypeTownhallTest() throws InvalidBuildingException {
+    assertThatExceptionOfType(InvalidBuildingException.class)
+        .isThrownBy(() -> buildingService.createBuilding("townhall", kingdom))
+        .withMessage("Only one townhall kingdom can have. Yes, hrrrm.");
+  }
+
+  @Test
+  public void validateNoBuildingTypeTest() {
+    assertThatExceptionOfType(MissingParameterException.class)
+        .isThrownBy(() -> buildingService.createBuilding("", kingdom))
+        .withMessage("Fill in building type you must.");
   }
 
   @Test
@@ -106,47 +115,22 @@ public class BuildingServiceTest {
     verify(building, times(1)).setKingdom(kingdom);
   }
 
-  @Test
-  public void validateBuildingTypeTest_406() {
-    setup();
-    HttpStatus status = HttpStatus.NOT_ACCEPTABLE;
-    String message = "Invalid building type.";
-    assertEquals(status, buildingService.validateBuildingType("barracks").getStatusCode());
-    assertThat(buildingService.validateBuildingType("barracks").toString().equals(message));
+  public void purchaseBuildingTest() {
+    int buildingsCountBefore = kingdom.getBuildings().size();
+    buildingService.purchaseBuilding("mine", player);
+    int buildingsCountAfter = kingdom.getBuildings().size();
+
+    assertEquals(buildingsCountBefore + 1, buildingsCountAfter);
   }
 
   @Test
-  public void validateBuildingTypeTest_406_townhall() {
-    setup();
-    HttpStatus status = HttpStatus.NOT_ACCEPTABLE;
-    String message = "Only one townhall per kingdom is allowed.";
-    assertEquals(status, buildingService.validateBuildingType("townhall").getStatusCode());
-    assertThat(buildingService.validateBuildingType("townhall").toString().equals(message));
-  }
+  public void upgradeBuildingTest() throws NotEnoughResourcesException {
+    Building buildingBeforeUpgrading = buildingService.getBuilding(kingdom, "townhall");
+    int buildingLevelBeforeUpgrading = buildingBeforeUpgrading.getLevel();
+    buildingService.upgradeBuilding(player, buildingBeforeUpgrading.getId());
+    Building buildingAfterUpgrading = buildingService.getBuilding(kingdom, "townhall");
+    int buildingLevelAfterUpgrading = buildingAfterUpgrading.getLevel();
 
-  @Test
-  public void validateBuildingTypeTest_400() {
-    setup();
-    HttpStatus status = HttpStatus.BAD_REQUEST;
-    String message = "Missing parameter(s): type!";
-    assertEquals(status, buildingService.validateBuildingType("").getStatusCode());
-    assertThat(buildingService.validateBuildingType("").toString().equals(message));
-  }
-
-  @Test
-  public void purchaseBuildingTest_200() {
-    setup();
-    HttpStatus status = HttpStatus.OK;
-    String message = "{\n"
-        + "    \"id\": 14,\n"
-        + "    \"type\": \"mine\",\n"
-        + "    \"level\": 1,\n"
-        + "    \"hp\": 1000,\n"
-        + "    \"startedAt\": 1608216943596000,\n"
-        + "    \"finishedAt\": 1608216943596060\n"
-        + "}";
-    assertEquals(status,
-        buildingService.purchaseBuilding("mine", player).getStatusCode());
-    assertThat(buildingService.purchaseBuilding("mine", player).toString().equals(message));
+    assertEquals(buildingLevelBeforeUpgrading + 1, buildingLevelAfterUpgrading);
   }
 }

@@ -2,7 +2,11 @@ package com.gattoverdetribes.gattoverdetribes.services;
 
 import com.gattoverdetribes.gattoverdetribes.ExternalConfig;
 import com.gattoverdetribes.gattoverdetribes.dtos.ResourceDetailsDTO;
-import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidResourceException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.InvalidBuildingException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingParameterException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.MissingResourceException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NoContentException;
+import com.gattoverdetribes.gattoverdetribes.exceptions.NotEnoughResourcesException;
 import com.gattoverdetribes.gattoverdetribes.mappers.Mapper;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
@@ -12,11 +16,11 @@ import com.gattoverdetribes.gattoverdetribes.models.resources.ResourceFactory;
 import com.gattoverdetribes.gattoverdetribes.models.resources.ResourceType;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,23 +32,36 @@ public class ResourceServiceImpl implements ResourceService {
 
   @Autowired
   public ResourceServiceImpl(
-      ResourceRepository resourceRepository, KingdomRepository kingdomRepository, Mapper mapper) {
+      ResourceRepository resourceRepository,
+      KingdomRepository kingdomRepository, Mapper mapper) {
     this.resourceRepository = resourceRepository;
     this.kingdomRepository = kingdomRepository;
     this.mapper = mapper;
   }
 
   @Override
-  public Resource createResource(String resourceType, Kingdom kingdom) {
-    try {
-      Resource resource = ResourceFactory.createResource(resourceType);
-      resource.setKingdom(kingdom);
-      saveResource(resource);
-      return resource;
-    } catch (InvalidResourceException e) {
-      System.out.println(e.getMessage());
+  public void validateResourceType(String type) {
+    if (type == null || type.isEmpty()) {
+      throw new MissingParameterException("Fill in resource type you must.");
     }
-    return null;
+
+    List<ResourceType> resourceTypes = Arrays.asList(ResourceType.values());
+    List<String> resources = resourceTypes.stream().map(t -> t.toString().toLowerCase())
+        .collect(Collectors.toList());
+    boolean containsType = resources.contains(type.toLowerCase());
+
+    if (!containsType) {
+      throw new InvalidBuildingException("Created such resource can not be. Yrsssss.");
+    }
+  }
+
+  @Override
+  public Resource createResource(String resourceType, Kingdom kingdom) {
+    validateResourceType(resourceType);
+    Resource resource = ResourceFactory.createResource(resourceType);
+    resource.setKingdom(kingdom);
+    saveResource(resource);
+    return resource;
   }
 
   @Override
@@ -52,76 +69,67 @@ public class ResourceServiceImpl implements ResourceService {
     resourceRepository.save(resource);
   }
 
-  public ResponseEntity<List<ResourceDetailsDTO>> getResourcesByKingdom(Kingdom kingdom) {
+  public List<ResourceDetailsDTO> getResourcesByKingdom(Kingdom kingdom) throws NoContentException {
 
-    List<ResourceDetailsDTO> resources = convertResourcesToDTOByKingdom(kingdom);
-
-    if (resources.isEmpty()) {
-      return new ResponseEntity<>(resources, HttpStatus.NO_CONTENT);
-    } else {
-      return new ResponseEntity<>(resources, HttpStatus.OK);
-    }
-  }
-
-  @Override
-  public List<ResourceDetailsDTO> convertResourcesToDTOByKingdom(Kingdom kingdom) {
     List<Resource> resources = resourceRepository.findAllByKingdomId(kingdom.getId());
+    if (resources.isEmpty()) {
+      throw new NoContentException("I sense no resources in this kingdom.");
+    }
     return mapper.resourceToResourceDetailsDTO(resources);
   }
 
   @Override
-  public Boolean checkSufficientResources(Kingdom kingdom) {
+  public void buildBuildingCheckSufficientResources(Kingdom kingdom)
+      throws NotEnoughResourcesException {
     Integer buildingCost = ExternalConfig.getInstance().getBuildingConstructionCost();
     List<Resource> resources = resourceRepository.findAllByKingdomId(kingdom.getId());
-    for (var resource : resources) {
-      if (resource.getType() == ResourceType.GOLD) {
-        if (resource.getAmount() >= buildingCost) {
-          return true;
-        }
-      }
+    int goldAmount = resources.stream()
+        .filter(r -> r.getType() == ResourceType.GOLD)
+        .findAny()
+        .map(Resource::getAmount)
+        .hashCode();
+    if (goldAmount < buildingCost) {
+      throw new NotEnoughResourcesException("Enough gold in your treasury there is not.");
     }
-    return false;
   }
 
   @Override
-  public Boolean canPurchaseBuildingUpgrade(Kingdom kingdom) {
-    Integer buildingCost = ExternalConfig.getInstance().getBuildingUpgradeCost();
+  public void upgradeBuildingCheckSufficientResources(Kingdom kingdom)
+      throws NotEnoughResourcesException {
+    Integer upgradeCost = ExternalConfig.getInstance().getBuildingUpgradeCost();
     List<Resource> resources = resourceRepository.findAllByKingdomId(kingdom.getId());
-
-    for (Resource resource : resources) {
-      if (resource.getType() == ResourceType.GOLD) {
-        Integer goldAmount = resource.getAmount();
-        if (goldAmount >= buildingCost) {
-          return true;
-        }
-      }
+    int goldAmount = resources.stream()
+        .filter(r -> r.getType() == ResourceType.GOLD)
+        .findAny()
+        .map(Resource::getAmount)
+        .hashCode();
+    if (goldAmount < upgradeCost) {
+      throw new NotEnoughResourcesException("Enough gold in your treasury there is not.");
     }
-    return false;
   }
 
   @Override
   public Resource getResource(Kingdom kingdom, String type) throws EntityNotFoundException {
     return kingdom.getResources().stream()
-        .filter(r -> r.getType().equals(ResourceType.valueOf(type)))
+        .filter(r -> r.getType().toString().toLowerCase().equals(type.toLowerCase()))
         .findAny()
-        .orElseThrow(() -> new EntityNotFoundException("Resource is not found!"));
+        .orElseThrow(() -> new MissingResourceException("Resource cannot be found!"));
   }
 
   @Override
   public void calculateKingdomsProduction() {
     if (kingdomRepository.findAll().size() == 0) {
-      System.err.println("No kingdom found, create one please");
-    } else {
-      for (Kingdom kingdom : kingdomRepository.findAll()) {
-        setKingdomProduction(kingdom);
-        if (kingdom.getResources().size() < 2) {
-          System.err.println("One or both resources missing, i can count only to potato");
-        } else {
-          List<Resource> resources = kingdom.getResources();
-          setResourcesAmount(kingdom, resources);
-          resourceRepository.saveAll(resources);
-        }
+      throw new NoContentException("No kingdoms in this world there are.");
+    }
+    for (Kingdom kingdom : kingdomRepository.findAll()) {
+      if (kingdom.getResources().size() < 2) {
+        throw new MissingResourceException(
+            "There are some resources missing, I can count only to potato!");
       }
+      setKingdomProduction(kingdom);
+      List<Resource> resources = kingdom.getResources();
+      setResourcesAmount(kingdom, resources);
+      resourceRepository.saveAll(resources);
     }
   }
 
@@ -129,7 +137,7 @@ public class ResourceServiceImpl implements ResourceService {
     int goldProduction = 0;
     int foodProduction = 0;
     if (kingdom.getBuildings().size() == 0) {
-      System.err.println("No buildings, no production :(");
+      throw new NoContentException("No buildings, no production!");
     }
     for (Building building : kingdom.getBuildings()) {
       if (building.getType() == BuildingType.MINE) {

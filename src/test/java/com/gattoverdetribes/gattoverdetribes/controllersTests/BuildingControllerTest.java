@@ -1,24 +1,30 @@
 package com.gattoverdetribes.gattoverdetribes.controllersTests;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
+import com.gattoverdetribes.gattoverdetribes.services.JavaMailService;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
+import com.gattoverdetribes.gattoverdetribes.models.Player;
+import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.Mine;
 import com.gattoverdetribes.gattoverdetribes.models.buildings.TownHall;
 import com.gattoverdetribes.gattoverdetribes.models.resources.Gold;
 import com.gattoverdetribes.gattoverdetribes.models.resources.Resource;
 import com.gattoverdetribes.gattoverdetribes.repositories.BuildingRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.KingdomRepository;
-import com.gattoverdetribes.gattoverdetribes.models.buildings.Building;
+import com.gattoverdetribes.gattoverdetribes.repositories.PlayerRepository;
 import com.gattoverdetribes.gattoverdetribes.repositories.ResourceRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,9 +48,13 @@ public class BuildingControllerTest {
   @Autowired
   private KingdomRepository kingdomRepository;
   @Autowired
+  private PlayerRepository playerRepository;
+  @Autowired
   private ResourceRepository resourceRepository;
   @Autowired
   private BuildingRepository buildingRepository;
+  @Mock
+  private JavaMailService javaMailService;
 
   String jwt;
   Building townHall;
@@ -52,17 +62,24 @@ public class BuildingControllerTest {
   List<Resource> resources;
   Gold gold;
   Kingdom kingdom;
+  Player player;
 
   @BeforeEach
   public void init() throws Exception {
+    Mockito.doNothing().when(javaMailService).sendConfirmationMail(any(), any());
     mockMvc
         .perform(
             post("/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"username\": \"rix\",\"password\": \"rix12345\",\"kingdomname\": "
+                    "{\"username\": \"rix\",\"email\": \"rix12345@gmail.com\","
+                        + "\"password\": \"rix12345\",\"kingdomname\": "
                         + "\"rix's kingdom\"}"))
         .andExpect(status().isOk());
+
+    player = playerRepository.findByUsername("rix").get();
+    player.setActive(true);
+    playerRepository.save(player);
 
     MvcResult result =
         mockMvc.perform(post("/login")
@@ -79,6 +96,7 @@ public class BuildingControllerTest {
     resources = new ArrayList<>();
     gold = new Gold();
     kingdom = kingdomRepository.findByName("rix's kingdom");
+
   }
 
   @Test
@@ -154,7 +172,7 @@ public class BuildingControllerTest {
   }
 
   @Test
-  public void createBuilding_400status() throws Exception {
+  public void createBuilding_EmptyBody_400status() throws Exception {
     final String json = "{}";
 
     mockMvc
@@ -165,7 +183,7 @@ public class BuildingControllerTest {
   }
 
   @Test
-  public void createBuilding_406status() throws Exception {
+  public void createBuilding_InvalidBuilding_406status() throws Exception {
     final String json = "{\n"
         + "    \"type\": \"barracks\"\n"
         + "}";
@@ -178,7 +196,7 @@ public class BuildingControllerTest {
   }
 
   @Test
-  public void createBuilding_409status() throws Exception {
+  public void createBuilding_NotEnoughResources_409status() throws Exception {
     final String json = "{\n"
         + "    \"type\": \"academy\"\n"
         + "}";
@@ -206,7 +224,7 @@ public class BuildingControllerTest {
     Long townHallId = townHall.getId();
 
     mockMvc
-        .perform(MockMvcRequestBuilders.post("/kingdom/buildings/" + townHallId)
+        .perform(MockMvcRequestBuilders.put("/kingdom/buildings/" + townHallId)
             .contentType(MediaType.APPLICATION_JSON)
             .header("X-tribes-token", "Bearer " + jwt))
         .andExpect(status().is(200))
@@ -218,11 +236,12 @@ public class BuildingControllerTest {
     buildingRepository.deleteAll();
 
     mockMvc
-        .perform(MockMvcRequestBuilders.post("/kingdom/buildings/1")
+        .perform(MockMvcRequestBuilders.put("/kingdom/buildings/1")
             .contentType(MediaType.APPLICATION_JSON)
             .header("X-tribes-token", "Bearer " + jwt))
         .andExpect(status().is(404))
-        .andExpect(content().json("{\"status\":\"error\",\"message\": \"Id not found.\"}"));
+        .andExpect(
+            content().json("{\"status\":\"error\",\"message\": \"Found this id was not.\"}"));
   }
 
   @Test
@@ -243,12 +262,14 @@ public class BuildingControllerTest {
     Long idMine = mine.getId();
 
     mockMvc
-        .perform(MockMvcRequestBuilders.post("/kingdom/buildings/" + idMine)
+        .perform(MockMvcRequestBuilders.put("/kingdom/buildings/" + idMine)
             .contentType(MediaType.APPLICATION_JSON)
             .header("X-tribes-token", "Bearer " + jwt))
         .andExpect(status().is(406))
         .andExpect(
-            content().json("{\"status\":\"error\",\"message\": \"Invalid building level.\"}"));
+            content().json(
+                "{\"status\":\"error\","
+                    + "\"message\": \"Building level cannot be higher than Townhall level.\"}"));
   }
 
   @Test
@@ -267,10 +288,11 @@ public class BuildingControllerTest {
     Long townHallId = townHall.getId();
 
     mockMvc
-        .perform(MockMvcRequestBuilders.post("/kingdom/buildings/" + townHallId)
+        .perform(MockMvcRequestBuilders.put("/kingdom/buildings/" + townHallId)
             .contentType(MediaType.APPLICATION_JSON)
             .header("X-tribes-token", "Bearer " + jwt))
         .andExpect(status().is(409))
-        .andExpect(content().json("{\"status\":\"error\",\"message\": \"Not enough resource.\"}"));
+        .andExpect(content().json(
+            "{\"status\":\"error\",\"message\": \"Enough gold in your treasury there is not.\"}"));
   }
 }

@@ -1,6 +1,5 @@
 package com.gattoverdetribes.gattoverdetribes.models.resources;
 
-import com.gattoverdetribes.gattoverdetribes.exceptions.NotEnoughResourcesException;
 import com.gattoverdetribes.gattoverdetribes.models.Kingdom;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
@@ -68,18 +67,5 @@ public abstract class Resource {
 
   public void setKingdom(Kingdom kingdom) {
     this.kingdom = kingdom;
-  }
-
-  public void earnResources(Integer amount) {
-    this.amount += amount;
-  }
-
-  public void spendResources(Integer amount) throws NotEnoughResourcesException {
-    if (this.amount > amount) {
-      this.amount -= amount;
-    } else {
-      throw new NotEnoughResourcesException(
-          "Not enough " + getClass().getSimpleName().toLowerCase() + ".");
-    }
   }
 }

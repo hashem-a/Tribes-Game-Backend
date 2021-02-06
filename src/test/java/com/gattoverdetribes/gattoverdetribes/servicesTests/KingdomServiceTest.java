@@ -43,7 +43,7 @@ public class KingdomServiceTest {
   @Test
   public void findKingdomNameByPlayerIdTest() {
     Kingdom expectedKingdom = new Kingdom("Narnia");
-    Player player = new Player("user", "user123456", expectedKingdom);
+    Player player = new Player("user", "user123456", "rix12345@gmail.com", expectedKingdom);
     playerRepository.save(player);
     String actualKingdomName = kingdomService.getKingdomByPlayerId(player.getId()).getName();
     assertEquals(expectedKingdom.getName(), actualKingdomName);
