@@ -3,8 +3,7 @@
 
 :guardsman::moyai::bomb::crown::european_castle::circus_tent::no_mobile_phones::underage::trophy:
 
-Technologies : Java, Spring-Boot, Spring Security (Authentication, Authorization using JWT), Hibernate, JPA, Flyway (Database Migration), MySQL, RESTful API, Circle CI, Gradle.  
-Front-end: JavaScript, React.
+Technologies : Java, Spring-Boot, Spring Security (Authentication, Authorization using JWT), Hibernate, JPA, Flyway (Database Migration), MySQL, RESTful API, Circle CI, Gradle. 
 
 **Environment _variables:_**
  
